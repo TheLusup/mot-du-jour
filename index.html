@@ -150,9 +150,13 @@
 
 <div id="modal-register" class="overlay hidden">
   <form class="modal" id="form-register">
-    <h2>Bienvenue !</h2>
-    <p class="muted">Choisis ton pseudo. Ton navigateur s'en souviendra, pas besoin de mot de passe.</p>
-    <input id="in-pseudo" maxlength="16" autocomplete="nickname" placeholder="Ton pseudo" required>
+    <h2>Connexion</h2>
+    <p class="muted">Entre ton adresse e-mail professionnelle. Seules les adresses autorisées peuvent jouer. Ton navigateur s'en souviendra.</p>
+    <input id="in-email" type="email" maxlength="120" autocomplete="email" placeholder="Ton adresse e-mail pro" required>
+    <div id="pseudo-block" class="hidden">
+      <p class="muted" style="margin-bottom:0">Première connexion : choisis le pseudo affiché dans les stats (ton adresse n'est jamais montrée aux autres).</p>
+      <input id="in-pseudo" maxlength="16" autocomplete="nickname" placeholder="Ton pseudo">
+    </div>
     <div class="err" id="reg-err"></div>
     <button class="btn primary" type="submit" style="width:100%">C'est parti</button>
   </form>
@@ -193,7 +197,7 @@ const ERRORS = {
   NO_WORD: "Pas de mot programmé aujourd'hui",
   BAD_PSEUDO: 'Pseudo de 2 à 16 caractères (lettres, chiffres, espace, - ou _)',
   PSEUDO_TAKEN: 'Ce pseudo est déjà pris',
-  TOO_MANY_SIGNUPS: "Trop d'inscriptions en ce moment, réessaie dans une heure",
+  NOT_ALLOWED: "Cette adresse n'est pas autorisée à jouer",
 };
 
 // ---------- storage (never trusted to work: falls back to memory) ----------
@@ -354,7 +358,7 @@ async function submit() {
 async function handleError(e) {
   const code = e.message;
   if (code === 'NEW_DAY') { toast('Nouveau mot du jour !'); await loadGame(); return; }
-  if (code === 'UNKNOWN_PLAYER') { setToken(null); askPseudo(); return; }
+  if (code === 'NOT_ALLOWED') { logout(); return; }
   if (code === 'NETWORK') { toast('Connexion impossible, réessaie'); return; }
   toast(ERRORS[code] || 'Erreur : ' + code);
   if (code === 'NOT_IN_DICT' || code === 'BAD_FIRST') shakeRow();
@@ -434,7 +438,7 @@ function bars(dist) {
 async function loadStats() {
   const view = $('view-stats');
   if (!stats) view.innerHTML = '<div class="muted">Chargement…</div>';
-  try { stats = await rpc('stats', { p_token: getToken() }); } catch (e) { view.innerHTML = '<div class="muted">Impossible de charger les stats.</div>'; return; }
+  try { stats = await rpc('stats', { p_token: getToken() }); } catch (e) { if (e.message === 'NOT_ALLOWED') { logout(); return; } view.innerHTML = '<div class="muted">Impossible de charger les stats.</div>'; return; }
   const me = game && game.pseudo;
   const iFinished = game && game.status !== 'playing';
   const done = stats.games_today.filter((g) => g.status !== 'playing');
@@ -479,11 +483,10 @@ async function loadStats() {
     </section>
     <section class="card">
       <h2>Mon compte</h2>
-      <p class="muted">Pour jouer sous le même pseudo sur un autre appareil (téléphone…), ouvre ce lien personnel dessus. Ne le partage pas : il permet de jouer à ta place.</p>
-      <button class="btn" id="btn-link">Copier mon lien de connexion</button>
+      <p class="muted">Sur un autre appareil, connecte-toi avec la même adresse e-mail pour retrouver ton pseudo et tes stats.</p>
+      <button class="btn" id="btn-logout">Se déconnecter de cet appareil</button>
     </section>`;
-  $('btn-link').disabled = !getToken();
-  $('btn-link').onclick = async () => toast((await copy(`${location.origin}${location.pathname}#cle=${getToken()}`)) ? 'Lien copié' : 'Copie impossible');
+  $('btn-logout').onclick = logout;
 }
 
 // ---------- views & modals ----------
@@ -500,32 +503,55 @@ $('tab-stats').onclick = () => showView('stats');
 $('btn-help').onclick = () => $('modal-help').classList.remove('hidden');
 document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.closest('.overlay').classList.add('hidden'));
 
-function askPseudo() {
+function askLogin() {
+  $('pseudo-block').classList.add('hidden');
+  $('in-pseudo').required = false;
   $('modal-register').classList.remove('hidden');
-  setTimeout(() => $('in-pseudo').focus(), 50);
+  setTimeout(() => $('in-email').focus(), 50);
 }
+function logout() {
+  setToken(null);
+  game = null; stats = null;
+  $('in-email').value = ''; $('in-pseudo').value = '';
+  $('grid').innerHTML = ''; $('kb').innerHTML = ''; $('end').classList.add('hidden'); $('num').textContent = '';
+  $('view-stats').innerHTML = '';
+  setMsg('Connecte-toi pour jouer');
+  showView('game');
+  askLogin();
+}
+$('in-email').addEventListener('input', () => { $('pseudo-block').classList.add('hidden'); $('in-pseudo').required = false; });
 $('form-register').onsubmit = async (e) => {
   e.preventDefault();
   $('reg-err').textContent = '';
+  const askingPseudo = !$('pseudo-block').classList.contains('hidden');
   try {
-    const r = await rpc('register', { p_pseudo: $('in-pseudo').value });
+    const args = { p_email: $('in-email').value };
+    if (askingPseudo) args.p_pseudo = $('in-pseudo').value;
+    const r = await rpc('login', args);
     setToken(r.token);
     $('modal-register').classList.add('hidden');
     await loadGame();
     try { if (!localStorage.getItem('mdj_help_seen')) { localStorage.setItem('mdj_help_seen', '1'); $('modal-help').classList.remove('hidden'); } } catch {}
   } catch (err) {
+    if (err.message === 'NEED_PSEUDO') {
+      $('pseudo-block').classList.remove('hidden');
+      $('in-pseudo').required = true;
+      $('in-pseudo').focus();
+      return;
+    }
     $('reg-err').textContent = ERRORS[err.message] || (err.message === 'NETWORK' ? 'Connexion impossible' : 'Erreur : ' + err.message);
   }
 };
 
 async function loadGame() {
+  if (!getToken()) { logout(); return; }
   try {
     game = await rpc('game_state', { p_token: getToken() });
   } catch (e) {
+    if (e.message === 'NOT_ALLOWED') { logout(); return; }
     setMsg(e.message === 'NO_WORD' ? ERRORS.NO_WORD : 'Impossible de joindre le serveur. Recharge la page.');
     return;
   }
-  if (!game.pseudo) { setToken(null); askPseudo(); }
   resetInput();
   renderGame();
   if (!$('view-stats').classList.contains('hidden')) loadStats();
@@ -534,9 +560,6 @@ async function loadGame() {
 window.addEventListener('resize', () => { if (game) renderGrid(); });
 
 (async function init() {
-  // Login link from another device: #cle=<token>
-  const m = location.hash.match(/cle=([0-9a-f-]{36})/i);
-  if (m) { setToken(m[1]); history.replaceState(null, '', location.pathname + location.search); }
   if (new URLSearchParams(location.search).has('mock')) {
     await new Promise((ok) => { const s = document.createElement('script'); s.src = '../dev/mock.js'; s.onload = s.onerror = ok; document.head.appendChild(s); });
   }
