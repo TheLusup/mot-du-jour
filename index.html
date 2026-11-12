@@ -94,6 +94,9 @@
   .today-item { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 120px; }
   .today-item .who { font-weight: 700; font-size: 14px; }
   .today-item .res { color: var(--muted); font-size: 13px; margin-bottom: 4px; }
+  .today-item .rar { font-size: 12px; margin-bottom: 4px; }
+  .today-item.lucky { border-color: var(--misplaced); box-shadow: 0 0 0 1px var(--misplaced); }
+  #end .rarity { font-size: 15px; }
   .mini { display: grid; gap: 2px; }
   .mini div { display: flex; gap: 2px; }
   .mini i { width: 10px; height: 10px; border-radius: 2px; background: var(--absent); display: block; }
@@ -287,6 +290,18 @@ function renderKeyboard() {
   }).join('')}</div>`).join('');
 }
 
+// Rarity = number of possible words left just before the winning guess (1 chance in N).
+// Found on the first try is always legendary. Groups (same length + first letter) hold at most ~250 words.
+function rarityInfo(n, tries) {
+  if (!n) return null;
+  const tiers = [[100, '🌟', 'Légendaire'], [40, '💎', 'Épique'], [12, '🔷', 'Rare'], [4, '🟢', 'Peu commun'], [2, '⚪', 'Commun'], [1, '🧠', 'Logique']];
+  let [, icon, label] = tiers.find(([min]) => n >= min);
+  if (tries === 1) { icon = '🌟'; label = 'Légendaire'; }
+  const text = tries === 1 ? `trouvé du premier coup, 1 chance sur ${n}`
+    : n === 1 ? 'il ne restait qu\'un mot possible' : `1 chance sur ${n}`;
+  return { icon, label, text, short: `1/${n}` };
+}
+
 function renderEnd() {
   const end = $('end');
   if (!game || game.status === 'playing') { end.classList.add('hidden'); return; }
@@ -295,6 +310,7 @@ function renderEnd() {
   end.innerHTML = `
     <p>${won ? `Bravo, trouvé en ${game.guesses.length}/${MAX_TRIES} !` : 'Perdu… le mot était'}</p>
     <div class="word">${game.word}</div>
+    ${won && game.rarity ? (() => { const r = rarityInfo(game.rarity, game.guesses.length); return `<p class="rarity"><b>${r.icon} ${r.label}</b> · ${r.text}</p>`; })() : ''}
     <p><button class="btn primary" id="btn-share">Partager mon résultat</button>
        <button class="btn" id="btn-see-stats">Voir les stats</button></p>
     <p class="muted">Prochain mot dans <span id="countdown"></span></p>`;
@@ -389,7 +405,9 @@ function shareText() {
   const icons = { 0: '⬜', 1: '🟠', 2: '🟦' };
   const score = game.status === 'won' ? `${game.guesses.length}/${MAX_TRIES}` : `X/${MAX_TRIES}`;
   const rows = game.patterns.map((p) => [...p].map((c) => icons[c]).join('')).join('\n');
-  return `Le Mot du Jour #${game.num} : ${score}\n\n${rows}\n\n${location.origin}${location.pathname}`;
+  const r = game.status === 'won' && rarityInfo(game.rarity, game.guesses.length);
+  const rarityLine = r ? `\n🎲 Rareté ${r.short} ${r.icon} ${r.label}` : '';
+  return `Le Mot du Jour #${game.num} : ${score}${rarityLine}\n\n${rows}\n\n${location.origin}${location.pathname}`;
 }
 async function copy(text) {
   try { await navigator.clipboard.writeText(text); return true; } catch {}
@@ -442,10 +460,18 @@ async function loadStats() {
   const me = game && game.pseudo;
   const iFinished = game && game.status !== 'playing';
   const done = stats.games_today.filter((g) => g.status !== 'playing');
+  const winners = stats.games_today.filter((g) => g.status === 'won' && g.rarity);
+  // badge only makes sense with at least 2 winners
+  const luckiest = winners.length >= 2 ? Math.max(...winners.map((g) => g.rarity)) : 0;
   const today = stats.games_today.length ? stats.games_today.map((g) => {
     const res = g.status === 'won' ? `${g.tries}/${MAX_TRIES}` : g.status === 'lost' ? `Perdu` : `En cours (${g.tries}/${MAX_TRIES})`;
     const showGrid = g.status !== 'playing' && Array.isArray(g.patterns);
-    return `<div class="today-item"><div class="who">${esc(g.pseudo)}</div><div class="res">${res}</div>${showGrid ? miniGrid(g.patterns) : ''}</div>`;
+    const r = g.status === 'won' && rarityInfo(g.rarity, g.tries);
+    const lucky = r && luckiest > 1 && g.rarity === luckiest;
+    return `<div class="today-item${lucky ? ' lucky' : ''}"><div class="who">${esc(g.pseudo)}</div><div class="res">${res}</div>`
+      + `${r ? `<div class="rar">${r.icon} ${r.label} · ${r.short}</div>` : ''}`
+      + `${lucky ? '<div class="rar"><b>🍀 Coup de chance du jour</b></div>' : ''}`
+      + `${showGrid ? miniGrid(g.patterns) : ''}</div>`;
   }).join('') : '<div class="muted">Personne n\'a encore joué aujourd\'hui.</div>';
 
   const rows = stats.players.filter((p) => p.played > 0).map((p, i) => `
@@ -455,6 +481,7 @@ async function loadStats() {
       <td class="num">${p.played ? Math.round(p.wins / p.played * 100) : 0} %</td>
       <td class="num">${p.avg ?? '–'}</td>
       <td class="num">${p.streak}</td><td class="num">${p.best}</td>
+      <td class="num">${p.best_rarity ? `1/${p.best_rarity}` : '–'}</td>
     </tr>`).join('');
 
   const mine = stats.players.find((p) => p.pseudo === me);
@@ -469,9 +496,9 @@ async function loadStats() {
     <section class="card">
       <h2>Classement</h2>
       ${rows ? `<div class="table-wrap"><table>
-        <thead><tr><th>#</th><th>Joueur</th><th class="num">Parties</th><th class="num">Victoires</th><th class="num">Moy.</th><th class="num">Série</th><th class="num">Record</th></tr></thead>
+        <thead><tr><th>#</th><th>Joueur</th><th class="num">Parties</th><th class="num">Victoires</th><th class="num">Moy.</th><th class="num">Série</th><th class="num">Record</th><th class="num">Coup</th></tr></thead>
         <tbody>${rows}</tbody></table></div>
-        <p class="muted">Classé par nombre de victoires, puis par moyenne d'essais. Série = jours gagnés d'affilée.</p>`
+        <p class="muted">Classé par nombre de victoires, puis par moyenne d'essais. Série = jours gagnés d'affilée. Coup = victoire la plus improbable (1 chance sur N de trouver avec les indices qu'on avait).</p>`
         : '<div class="muted">Pas encore de partie terminée.</div>'}
     </section>
     <section class="card">
