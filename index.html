@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Le Mot du Jour</title>
+<style>
+  :root {
+    --bg: #f4f1ea; --panel: #fffdf8; --ink: #1d2433; --muted: #6b7280; --line: #d9d3c7;
+    --empty: #ebe6db; --absent: #8a8f99; --misplaced: #f08c2e; --correct: #2457c5;
+    --key: #ddd7ca; --accent: #2457c5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12161f; --panel: #1a1f2b; --ink: #eef0f4; --muted: #9aa3b2; --line: #2c3342;
+      --empty: #232a38; --absent: #3d4452; --misplaced: #e8862a; --correct: #3b6fe0;
+      --key: #313848; --accent: #6b98f5;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; min-height: 100dvh;
+    -webkit-tap-highlight-color: transparent;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  header h1 { font-size: 20px; margin: 0; letter-spacing: .04em; white-space: nowrap; }
+  @media (max-width: 360px) { header h1 { font-size: 16px; letter-spacing: 0; } nav button { padding: 6px 9px; } }
+  header h1 small { font-weight: 500; color: var(--muted); font-size: 14px; margin-left: 6px; }
+  nav { display: flex; gap: 6px; }
+  nav button, .btn {
+    font: inherit; font-size: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+    border-radius: 8px; padding: 7px 12px; cursor: pointer;
+  }
+  nav button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 16px; width: 100%; max-width: 720px; margin: 0 auto; }
+  .hidden { display: none !important; }
+
+  /* Grid */
+  #grid { display: grid; gap: 5px; margin: 8px 0 12px; }
+  .row { display: grid; grid-template-columns: repeat(var(--n), var(--tile)); gap: 5px; }
+  .row.shake { animation: shake .35s; }
+  .tile {
+    width: var(--tile); height: var(--tile); border-radius: 6px; background: var(--empty);
+    display: flex; align-items: center; justify-content: center; position: relative;
+    font-weight: 800; font-size: calc(var(--tile) * .52); text-transform: uppercase; user-select: none;
+  }
+  .tile.hint { color: var(--muted); opacity: .55; }
+  .tile.typed { outline: 2px solid var(--line); }
+  .tile.s0 { background: var(--absent); color: #fff; }
+  .tile.s2 { background: var(--correct); color: #fff; }
+  .tile.s1 { background: var(--empty); color: var(--ink); }
+  .tile.s1::before {
+    content: ""; position: absolute; inset: 8%; border-radius: 50%; background: var(--misplaced); z-index: 0;
+  }
+  .tile.s1 span { position: relative; z-index: 1; color: #fff; }
+  .tile.reveal { animation: flip .4s ease both; }
+  @keyframes flip { 0% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
+  @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+
+  #msg { min-height: 22px; font-size: 15px; color: var(--muted); text-align: center; }
+  #end { text-align: center; margin: 4px 0 10px; }
+  #end .word { font-size: 22px; font-weight: 800; letter-spacing: .12em; }
+  #end p { margin: 6px 0; }
+
+  /* Keyboard */
+  #kb { width: 100%; max-width: 520px; margin-top: auto; padding-bottom: env(safe-area-inset-bottom); }
+  .kb-row { display: flex; gap: 5px; justify-content: center; margin-bottom: 6px; }
+  .key {
+    flex: 1; min-width: 0; height: 52px; border: 0; border-radius: 6px; background: var(--key); color: var(--ink);
+    font: inherit; font-weight: 700; font-size: 16px; cursor: pointer; padding: 0;
+  }
+  .key.wide { flex: 1.6; font-size: 14px; }
+  .key.s0 { background: var(--absent); color: #fff; opacity: .6; }
+  .key.s1 { background: var(--misplaced); color: #fff; }
+  .key.s2 { background: var(--correct); color: #fff; }
+
+  /* Panels */
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; width: 100%; margin-bottom: 14px; }
+  .card h2 { font-size: 16px; margin: 0 0 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.me td { font-weight: 700; }
+  .table-wrap { overflow-x: auto; }
+  .today-list { display: flex; flex-wrap: wrap; gap: 12px; }
+  .today-item { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 120px; }
+  .today-item .who { font-weight: 700; font-size: 14px; }
+  .today-item .res { color: var(--muted); font-size: 13px; margin-bottom: 4px; }
+  .mini { display: grid; gap: 2px; }
+  .mini div { display: flex; gap: 2px; }
+  .mini i { width: 10px; height: 10px; border-radius: 2px; background: var(--absent); display: block; }
+  .mini i.m1 { background: var(--misplaced); border-radius: 50%; }
+  .mini i.m2 { background: var(--correct); }
+  .bars { display: grid; gap: 4px; font-size: 13px; }
+  .bar { display: grid; grid-template-columns: 16px 1fr; gap: 6px; align-items: center; }
+  .bar span { background: var(--absent); color: #fff; padding: 2px 6px; border-radius: 4px; text-align: right; min-width: 22px; font-weight: 700; }
+  .bar span.hi { background: var(--correct); }
+  .dist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 480px) {
+    .dist-grid { grid-template-columns: 1fr; }
+    table { font-size: 13px; }
+    th, td { padding: 6px 3px; }
+    th { font-size: 10px; letter-spacing: 0; }
+  }
+  .muted { color: var(--muted); font-size: 13px; }
+
+  /* Modal */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+  .modal { background: var(--panel); border-radius: 14px; padding: 20px; width: 100%; max-width: 420px; max-height: 90dvh; overflow: auto; }
+  .modal h2 { margin: 0 0 10px; font-size: 19px; }
+  .modal input { width: 100%; font: inherit; font-size: 17px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); margin: 8px 0; }
+  .modal .err { color: #d64545; font-size: 14px; min-height: 18px; }
+  .demo { display: flex; gap: 4px; margin: 6px 0 12px; }
+  .demo .tile { --tile: 34px; }
+
+  #toast { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-weight: 600; z-index: 20; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  #toast.show { opacity: 1; }
+  footer { text-align: center; font-size: 11px; color: var(--muted); padding: 6px 16px 10px; }
+  footer a { color: inherit; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Le Mot du Jour<small id="num"></small></h1>
+  <nav>
+    <button id="tab-game" aria-pressed="true">Jeu</button>
+    <button id="tab-stats" aria-pressed="false">Stats</button>
+    <button id="btn-help" aria-label="Règles">?</button>
+  </nav>
+</header>
+
+<main id="view-game">
+  <div id="msg">Chargement…</div>
+  <div id="grid"></div>
+  <div id="end" class="hidden"></div>
+  <div id="kb"></div>
+</main>
+
+<main id="view-stats" class="hidden"></main>
+
+<footer>Dictionnaire : <a href="http://www.lexique.org" target="_blank" rel="noopener">Lexique 3.83</a> (CC BY-SA 4.0)</footer>
+
+<div id="modal-register" class="overlay hidden">
+  <form class="modal" id="form-register">
+    <h2>Bienvenue !</h2>
+    <p class="muted">Choisis ton pseudo. Ton navigateur s'en souviendra, pas besoin de mot de passe.</p>
+    <input id="in-pseudo" maxlength="16" autocomplete="nickname" placeholder="Ton pseudo" required>
+    <div class="err" id="reg-err"></div>
+    <button class="btn primary" type="submit" style="width:100%">C'est parti</button>
+  </form>
+</div>
+
+<div id="modal-help" class="overlay hidden">
+  <div class="modal">
+    <h2>Comment jouer</h2>
+    <p>Un mot par jour, le même pour tout le groupe. La première lettre est donnée, tu as <b>6 essais</b>. Chaque essai doit être un mot français qui commence par cette lettre.</p>
+    <div class="demo">
+      <div class="tile s2">C</div><div class="tile s1"><span>H</span></div><div class="tile s0">A</div><div class="tile s0">T</div><div class="tile s2">S</div>
+    </div>
+    <p><b style="color:var(--correct)">Bleu</b> : bonne lettre, bien placée.<br>
+       <b style="color:var(--misplaced)">Rond orange</b> : la lettre est dans le mot, mais ailleurs.<br>
+       <b>Gris</b> : la lettre n'est pas (ou plus) dans le mot.</p>
+    <p class="muted">Pas d'accents à taper : É = E. Nouveau mot chaque jour à minuit (heure de Paris).</p>
+    <button class="btn primary" data-close style="width:100%">Compris</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ============ CONFIG: paste your Supabase values here ============
+const SUPABASE_URL = 'https://ebbgcqpjydnecgtodvua.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_BMfTUJ5sj2oTZshhR4jUpg_FOuy0w-Z';   // "anon" / "publishable" key (public by design)
+// ================================================================
+
+const MAX_TRIES = 6;
+const TOKEN_KEY = 'mdj_token';
+const $ = (id) => document.getElementById(id);
+
+const ERRORS = {
+  NOT_IN_DICT: "Ce mot n'est pas dans le dictionnaire",
+  BAD_FIRST: 'Le mot doit commencer par la lettre donnée',
+  BAD_LENGTH: 'Mot incomplet',
+  GAME_OVER: 'Partie déjà terminée',
+  NO_WORD: "Pas de mot programmé aujourd'hui",
+  BAD_PSEUDO: 'Pseudo de 2 à 16 caractères (lettres, chiffres, espace, - ou _)',
+  PSEUDO_TAKEN: 'Ce pseudo est déjà pris',
+  TOO_MANY_SIGNUPS: "Trop d'inscriptions en ce moment, réessaie dans une heure",
+};
+
+// ---------- storage (never trusted to work: falls back to memory) ----------
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+let memToken = null;
+function getToken() {
+  let t = memToken;
+  try { t = localStorage.getItem(TOKEN_KEY) || memToken; } catch {}
+  return t && UUID_RE.test(t) ? t : null;
+}
+function setToken(t) {
+  memToken = t || null;
+  try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch {}
+}
+
+// ---------- API ----------
+async function rpc(fn, args = {}) {
+  if (window.MOCK_API) return window.MOCK_API(fn, args);
+  const headers = { 'Content-Type': 'application/json', apikey: SUPABASE_KEY };
+  if (SUPABASE_KEY.startsWith('eyJ')) headers.Authorization = 'Bearer ' + SUPABASE_KEY;
+  let res;
+  try {
+    res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, { method: 'POST', headers, body: JSON.stringify(args) });
+  } catch { throw new Error('NETWORK'); }
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error((data && data.message) || 'HTTP_' + res.status);
+  return data;
+}
+
+// ---------- state ----------
+let game = null;      // server state
+let input = '';       // current row being typed
+let busy = false;
+let revealRow = -1;   // row to animate
+let stats = null;
+
+function tileSize(n) {
+  const avail = Math.min(window.innerWidth, 720) - 32;
+  const availH = window.innerHeight - 330;   // header + keyboard + messages
+  return Math.max(18, Math.min(58, Math.floor((avail - 5 * (n - 1)) / n), Math.floor((availH - 5 * 5) / 6)));
+}
+
+function knownLetters() {
+  const known = Array(game.length).fill('');
+  known[0] = game.first;
+  game.guesses.forEach((g, r) => [...game.patterns[r]].forEach((p, i) => { if (p === '2') known[i] = g[i]; }));
+  return known;
+}
+
+function renderGrid() {
+  const n = game.length, grid = $('grid');
+  grid.style.setProperty('--n', n);
+  grid.style.setProperty('--tile', tileSize(n) + 'px');
+  const known = knownLetters();
+  const playing = game.status === 'playing';
+  let html = '';
+  for (let r = 0; r < MAX_TRIES; r++) {
+    html += `<div class="row" data-r="${r}">`;
+    for (let i = 0; i < n; i++) {
+      if (r < game.guesses.length) {
+        const p = game.patterns[r][i], ch = game.guesses[r][i];
+        const anim = r === revealRow ? ` reveal" style="animation-delay:${i * 90}ms` : '';
+        html += `<div class="tile s${p}${anim}"><span>${ch}</span></div>`;
+      } else if (r === game.guesses.length && playing) {
+        if (i < input.length) html += `<div class="tile typed">${input[i]}</div>`;
+        else html += `<div class="tile hint">${known[i] || '·'}</div>`;
+      } else {
+        html += `<div class="tile"></div>`;
+      }
+    }
+    html += '</div>';
+  }
+  grid.innerHTML = html;
+  revealRow = -1;
+}
+
+const LAYOUT = ['AZERTYUIOP', 'QSDFGHJKLM', '⌫WXCVBN⏎'];
+function renderKeyboard() {
+  const best = {};
+  if (game) game.guesses.forEach((g, r) => [...g].forEach((ch, i) => {
+    best[ch] = Math.max(best[ch] ?? -1, +game.patterns[r][i]);
+  }));
+  $('kb').innerHTML = LAYOUT.map((row) => `<div class="kb-row">${[...row].map((k) => {
+    if (k === '⌫') return `<button class="key wide" data-k="BACK" aria-label="Effacer">⌫</button>`;
+    if (k === '⏎') return `<button class="key wide" data-k="ENTER">Entrée</button>`;
+    return `<button class="key${best[k] !== undefined ? ' s' + best[k] : ''}" data-k="${k}">${k}</button>`;
+  }).join('')}</div>`).join('');
+}
+
+function renderEnd() {
+  const end = $('end');
+  if (!game || game.status === 'playing') { end.classList.add('hidden'); return; }
+  const won = game.status === 'won';
+  end.classList.remove('hidden');
+  end.innerHTML = `
+    <p>${won ? `Bravo, trouvé en ${game.guesses.length}/${MAX_TRIES} !` : 'Perdu… le mot était'}</p>
+    <div class="word">${game.word}</div>
+    <p><button class="btn primary" id="btn-share">Partager mon résultat</button>
+       <button class="btn" id="btn-see-stats">Voir les stats</button></p>
+    <p class="muted">Prochain mot dans <span id="countdown"></span></p>`;
+  $('btn-share').onclick = share;
+  $('btn-see-stats').onclick = () => showView('stats');
+  tickCountdown();
+}
+
+function renderGame() {
+  $('num').textContent = game ? `#${game.num}` : '';
+  if (!game) return;
+  renderGrid();
+  renderKeyboard();
+  $('kb').classList.toggle('hidden', game.status !== 'playing');
+  renderEnd();
+  if (game.status === 'playing') {
+    setMsg(game.guesses.length ? `Essai ${game.guesses.length + 1}/${MAX_TRIES}` : `Mot de ${game.length} lettres`);
+  } else setMsg('');
+}
+
+function setMsg(t) { $('msg').textContent = t; }
+function toast(t) {
+  const el = $('toast'); el.textContent = t; el.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove('show'), 1800);
+}
+function shakeRow() {
+  const row = document.querySelector(`.row[data-r="${game.guesses.length}"]`);
+  if (row) { row.classList.remove('shake'); void row.offsetWidth; row.classList.add('shake'); }
+}
+
+// ---------- input ----------
+function resetInput() { input = game ? game.first : ''; }
+
+async function press(k) {
+  if (!game || game.status !== 'playing' || busy) return;
+  if (k === 'BACK') { if (input.length > 1) input = input.slice(0, -1); }
+  else if (k === 'ENTER') { await submit(); return; }
+  else if (/^[A-Z]$/.test(k) && input.length < game.length) {
+    if (input.length === 1 && k === game.first) return;   // first letter already given
+    input += k;
+  }
+  renderGrid();
+}
+
+async function submit() {
+  if (input.length < game.length) { toast(`Il faut ${game.length} lettres`); shakeRow(); return; }
+  busy = true;
+  try {
+    const next = await rpc('guess', { p_token: getToken(), p_day: game.day, p_word: input });
+    revealRow = game.guesses.length;
+    game = next;
+    resetInput();
+    renderGame();
+    stats = null;
+    if (game.status === 'won') toast(['Génial !', 'Magnifique !', 'Superbe !', 'Bien joué !', 'Ouf !', 'De justesse !'][game.guesses.length - 1]);
+  } catch (e) {
+    await handleError(e);
+  } finally { busy = false; }
+}
+
+async function handleError(e) {
+  const code = e.message;
+  if (code === 'NEW_DAY') { toast('Nouveau mot du jour !'); await loadGame(); return; }
+  if (code === 'UNKNOWN_PLAYER') { setToken(null); askPseudo(); return; }
+  if (code === 'NETWORK') { toast('Connexion impossible, réessaie'); return; }
+  toast(ERRORS[code] || 'Erreur : ' + code);
+  if (code === 'NOT_IN_DICT' || code === 'BAD_FIRST') shakeRow();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (document.querySelector('.overlay:not(.hidden)')) return;
+  if ($('view-game').classList.contains('hidden')) return;
+  if (!game || game.status !== 'playing') return;
+  let k = e.key;
+  if (k === 'Enter') k = 'ENTER';
+  else if (k === 'Backspace') k = 'BACK';
+  else {
+    k = k.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+    if (!/^[A-Z]$/.test(k)) return;
+  }
+  e.preventDefault();
+  press(k);
+});
+$('kb').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-k]');
+  if (b) { b.blur(); press(b.dataset.k); }
+});
+
+// ---------- share ----------
+function shareText() {
+  const icons = { 0: '⬜', 1: '🟠', 2: '🟦' };
+  const score = game.status === 'won' ? `${game.guesses.length}/${MAX_TRIES}` : `X/${MAX_TRIES}`;
+  const rows = game.patterns.map((p) => [...p].map((c) => icons[c]).join('')).join('\n');
+  return `Le Mot du Jour #${game.num} : ${score}\n\n${rows}\n\n${location.origin}${location.pathname}`;
+}
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch {}
+  const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+  let ok = false; try { ok = document.execCommand('copy'); } catch {}
+  ta.remove(); return ok;
+}
+async function share() {
+  toast((await copy(shareText())) ? 'Résultat copié, colle-le dans le groupe !' : 'Copie impossible');
+}
+
+// ---------- countdown ----------
+function secondsToParisMidnight() {
+  const parts = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', hour: 'numeric', minute: 'numeric', second: 'numeric', hourCycle: 'h23' })
+    .formatToParts(new Date()).reduce((a, p) => (a[p.type] = +p.value, a), {});
+  return 86400 - (parts.hour * 3600 + parts.minute * 60 + parts.second);
+}
+function tickCountdown() {
+  const el = $('countdown'); if (!el) return;
+  const s = secondsToParisMidnight();
+  const pad = (x) => String(x).padStart(2, '0');
+  el.textContent = `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
+}
+function parisToday() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+}
+let reloading = false;
+setInterval(async () => {
+  tickCountdown();
+  // New day: reload once (a few seconds late, to absorb clock drift)
+  if (game && !reloading && game.status !== 'playing' && parisToday() > game.day && secondsToParisMidnight() < 86390) {
+    reloading = true; await loadGame(); reloading = false;
+  }
+}, 1000);
+
+// ---------- stats ----------
+function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function miniGrid(patterns) {
+  return `<div class="mini">${patterns.map((p) => `<div>${[...p].map((c) => `<i class="m${c}"></i>`).join('')}</div>`).join('')}</div>`;
+}
+function bars(dist) {
+  const max = Math.max(1, ...dist);
+  return `<div class="bars">${dist.map((v, i) => `<div class="bar"><b>${i + 1}</b><span class="${v === max && v > 0 ? 'hi' : ''}" style="width:${Math.max(8, v / max * 100)}%">${v}</span></div>`).join('')}</div>`;
+}
+
+async function loadStats() {
+  const view = $('view-stats');
+  if (!stats) view.innerHTML = '<div class="muted">Chargement…</div>';
+  try { stats = await rpc('stats', { p_token: getToken() }); } catch (e) { view.innerHTML = '<div class="muted">Impossible de charger les stats.</div>'; return; }
+  const me = game && game.pseudo;
+  const iFinished = game && game.status !== 'playing';
+  const done = stats.games_today.filter((g) => g.status !== 'playing');
+  const today = stats.games_today.length ? stats.games_today.map((g) => {
+    const res = g.status === 'won' ? `${g.tries}/${MAX_TRIES}` : g.status === 'lost' ? `Perdu` : `En cours (${g.tries}/${MAX_TRIES})`;
+    const showGrid = g.status !== 'playing' && Array.isArray(g.patterns);
+    return `<div class="today-item"><div class="who">${esc(g.pseudo)}</div><div class="res">${res}</div>${showGrid ? miniGrid(g.patterns) : ''}</div>`;
+  }).join('') : '<div class="muted">Personne n\'a encore joué aujourd\'hui.</div>';
+
+  const rows = stats.players.filter((p) => p.played > 0).map((p, i) => `
+    <tr class="${p.pseudo === me ? 'me' : ''}">
+      <td>${i + 1}</td><td>${esc(p.pseudo)}</td>
+      <td class="num">${p.played}</td>
+      <td class="num">${p.played ? Math.round(p.wins / p.played * 100) : 0} %</td>
+      <td class="num">${p.avg ?? '–'}</td>
+      <td class="num">${p.streak}</td><td class="num">${p.best}</td>
+    </tr>`).join('');
+
+  const mine = stats.players.find((p) => p.pseudo === me);
+  const group = [0, 1, 2, 3, 4, 5].map((i) => stats.players.reduce((s, p) => s + p.dist[i], 0));
+
+  view.innerHTML = `
+    <section class="card">
+      <h2>Aujourd'hui ${game ? '· #' + game.num : ''} <span class="muted">(${done.length} terminé${done.length > 1 ? 's' : ''})</span></h2>
+      <div class="today-list">${today}</div>
+      ${!iFinished && stats.games_today.some((g) => g.status !== 'playing' && g.pseudo !== me) ? '<p class="muted">Termine ta partie pour voir les grilles des autres.</p>' : ''}
+    </section>
+    <section class="card">
+      <h2>Classement</h2>
+      ${rows ? `<div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>Joueur</th><th class="num">Parties</th><th class="num">Victoires</th><th class="num">Moy.</th><th class="num">Série</th><th class="num">Record</th></tr></thead>
+        <tbody>${rows}</tbody></table></div>
+        <p class="muted">Classé par nombre de victoires, puis par moyenne d'essais. Série = jours gagnés d'affilée.</p>`
+        : '<div class="muted">Pas encore de partie terminée.</div>'}
+    </section>
+    <section class="card">
+      <h2>Répartition des essais (victoires)</h2>
+      <div class="dist-grid">
+        <div><div class="muted" style="margin-bottom:6px">Moi${me ? ' (' + esc(me) + ')' : ''}</div>${mine ? bars(mine.dist) : '<div class="muted">–</div>'}</div>
+        <div><div class="muted" style="margin-bottom:6px">Tout le groupe</div>${bars(group)}</div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Mon compte</h2>
+      <p class="muted">Pour jouer sous le même pseudo sur un autre appareil (téléphone…), ouvre ce lien personnel dessus. Ne le partage pas : il permet de jouer à ta place.</p>
+      <button class="btn" id="btn-link">Copier mon lien de connexion</button>
+    </section>`;
+  $('btn-link').disabled = !getToken();
+  $('btn-link').onclick = async () => toast((await copy(`${location.origin}${location.pathname}#cle=${getToken()}`)) ? 'Lien copié' : 'Copie impossible');
+}
+
+// ---------- views & modals ----------
+function showView(v) {
+  $('view-game').classList.toggle('hidden', v !== 'game');
+  $('view-stats').classList.toggle('hidden', v !== 'stats');
+  $('tab-game').setAttribute('aria-pressed', v === 'game');
+  $('tab-stats').setAttribute('aria-pressed', v === 'stats');
+  if (v === 'stats') loadStats();
+  else if (game) renderGrid();
+}
+$('tab-game').onclick = () => showView('game');
+$('tab-stats').onclick = () => showView('stats');
+$('btn-help').onclick = () => $('modal-help').classList.remove('hidden');
+document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.closest('.overlay').classList.add('hidden'));
+
+function askPseudo() {
+  $('modal-register').classList.remove('hidden');
+  setTimeout(() => $('in-pseudo').focus(), 50);
+}
+$('form-register').onsubmit = async (e) => {
+  e.preventDefault();
+  $('reg-err').textContent = '';
+  try {
+    const r = await rpc('register', { p_pseudo: $('in-pseudo').value });
+    setToken(r.token);
+    $('modal-register').classList.add('hidden');
+    await loadGame();
+    try { if (!localStorage.getItem('mdj_help_seen')) { localStorage.setItem('mdj_help_seen', '1'); $('modal-help').classList.remove('hidden'); } } catch {}
+  } catch (err) {
+    $('reg-err').textContent = ERRORS[err.message] || (err.message === 'NETWORK' ? 'Connexion impossible' : 'Erreur : ' + err.message);
+  }
+};
+
+async function loadGame() {
+  try {
+    game = await rpc('game_state', { p_token: getToken() });
+  } catch (e) {
+    setMsg(e.message === 'NO_WORD' ? ERRORS.NO_WORD : 'Impossible de joindre le serveur. Recharge la page.');
+    return;
+  }
+  if (!game.pseudo) { setToken(null); askPseudo(); }
+  resetInput();
+  renderGame();
+  if (!$('view-stats').classList.contains('hidden')) loadStats();
+}
+
+window.addEventListener('resize', () => { if (game) renderGrid(); });
+
+(async function init() {
+  // Login link from another device: #cle=<token>
+  const m = location.hash.match(/cle=([0-9a-f-]{36})/i);
+  if (m) { setToken(m[1]); history.replaceState(null, '', location.pathname + location.search); }
+  if (new URLSearchParams(location.search).has('mock')) {
+    await new Promise((ok) => { const s = document.createElement('script'); s.src = '../dev/mock.js'; s.onload = s.onerror = ok; document.head.appendChild(s); });
+  }
+  await loadGame();
+})();
+</script>
+</body>
+</html>
