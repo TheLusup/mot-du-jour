@@ -4,30 +4,30 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Le Mot du Jour</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
+  /* Palette: red = right place, yellow = wrong place, blue = absent, blue background */
   :root {
-    --bg: #f4f1ea; --panel: #fffdf8; --ink: #1d2433; --muted: #6b7280; --line: #d9d3c7;
-    --empty: #ebe6db; --absent: #8a8f99; --misplaced: #f08c2e; --correct: #2457c5;
-    --key: #ddd7ca; --accent: #2457c5;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #12161f; --panel: #1a1f2b; --ink: #eef0f4; --muted: #9aa3b2; --line: #2c3342;
-      --empty: #232a38; --absent: #3d4452; --misplaced: #e8862a; --correct: #3b6fe0;
-      --key: #313848; --accent: #6b98f5;
-    }
+    --bg: #0c2d63; --bg2: #133c80; --panel: #123672; --ink: #ffffff; --muted: #a8bce4; --line: #2b5299;
+    --empty: #0a2550; --absent: #3d6fd0; --misplaced: #ffc83d; --misplaced-ink: #1c1a12; --correct: #e63946;
+    --key: #1f4a93; --accent: #ffc83d; --accent-ink: #1c1a12;
+    --ease-out: cubic-bezier(.2, .9, .3, 1.2);
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
   body {
-    background: var(--bg); color: var(--ink);
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(120% 80% at 50% 0%, var(--bg2) 0%, var(--bg) 60%) fixed, var(--bg);
+    color: var(--ink);
+    font-family: "Outfit", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     display: flex; flex-direction: column; min-height: 100dvh;
     -webkit-tap-highlight-color: transparent;
   }
   header {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel);
+    padding: 10px 16px; border-bottom: 1px solid var(--line); background: rgba(10, 37, 80, .55);
+    backdrop-filter: blur(6px);
   }
   header h1 { font-size: 20px; margin: 0; letter-spacing: .04em; white-space: nowrap; }
   @media (max-width: 360px) { header h1 { font-size: 16px; letter-spacing: 0; } nav button { padding: 6px 9px; } }
@@ -36,9 +36,13 @@
   nav button, .btn {
     font: inherit; font-size: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
     border-radius: 8px; padding: 7px 12px; cursor: pointer;
+    transition: transform .12s ease, background-color .2s ease, filter .2s ease;
   }
-  nav button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  nav button:hover, .btn:hover { filter: brightness(1.12); }
+  nav button:active, .btn:active { transform: scale(.95); }
+  nav button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .btn:disabled { opacity: .5; cursor: default; }
   main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 16px; width: 100%; max-width: 720px; margin: 0 auto; }
   .hidden { display: none !important; }
 
@@ -47,22 +51,30 @@
   .row { display: grid; grid-template-columns: repeat(var(--n), var(--tile)); gap: 5px; }
   .row.shake { animation: shake .35s; }
   .tile {
-    width: var(--tile); height: var(--tile); border-radius: 6px; background: var(--empty);
+    width: var(--tile); height: var(--tile); border-radius: 10px; background: var(--empty);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08), 0 2px 0 rgba(0, 0, 0, .25);
     display: flex; align-items: center; justify-content: center; position: relative;
     font-weight: 800; font-size: calc(var(--tile) * .52); text-transform: uppercase; user-select: none;
   }
-  .tile.hint { color: var(--muted); opacity: .55; }
-  .tile.typed { outline: 2px solid var(--line); }
-  .tile.s0 { background: var(--absent); color: #fff; }
-  .tile.s2 { background: var(--correct); color: #fff; }
-  .tile.s1 { background: var(--empty); color: var(--ink); }
+  .tile.hint { color: var(--muted); opacity: .5; }
+  .tile.typed { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .55), 0 2px 0 rgba(0, 0, 0, .25); }
+  .tile.pop { animation: pop .14s var(--ease-out); }
+  .tile.s0 { background: var(--absent); color: rgba(255, 255, 255, .85); }
+  .tile.s2 { background: var(--correct); color: #fff; box-shadow: 0 2px 0 rgba(0, 0, 0, .3), 0 0 14px rgba(230, 57, 70, .35); }
+  .tile.s1 { background: var(--absent); color: var(--ink); }
   .tile.s1::before {
-    content: ""; position: absolute; inset: 8%; border-radius: 50%; background: var(--misplaced); z-index: 0;
+    content: ""; position: absolute; inset: 6%; border-radius: 50%; background: var(--misplaced); z-index: 0;
   }
-  .tile.s1 span { position: relative; z-index: 1; color: #fff; }
-  .tile.reveal { animation: flip .4s ease both; }
-  @keyframes flip { 0% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
+  .tile.s1 span { position: relative; z-index: 1; color: var(--misplaced-ink); }
+  /* reveal: flip each tile one after the other; win: then a little jump */
+  .tile.reveal { animation: flip .45s ease both; animation-delay: var(--d, 0ms); }
+  .tile.reveal.win { animation: flip .45s ease both, jump .5s var(--ease-out) both; animation-delay: var(--d, 0ms), var(--d2, 0ms); }
+  @keyframes flip { 0% { transform: perspective(400px) rotateX(-90deg); filter: brightness(.6); } 100% { transform: perspective(400px) rotateX(0); filter: none; } }
+  @keyframes pop { 0% { transform: scale(.85); } 60% { transform: scale(1.08); } 100% { transform: scale(1); } }
+  @keyframes jump { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-28%); } 70% { transform: translateY(4%); } }
   @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @keyframes zoomIn { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
 
   #msg { min-height: 22px; font-size: 15px; color: var(--muted); text-align: center; }
   #end { text-align: center; margin: 4px 0 10px; }
@@ -73,16 +85,21 @@
   #kb { width: 100%; max-width: 520px; margin-top: auto; padding-bottom: env(safe-area-inset-bottom); }
   .kb-row { display: flex; gap: 5px; justify-content: center; margin-bottom: 6px; }
   .key {
-    flex: 1; min-width: 0; height: 52px; border: 0; border-radius: 6px; background: var(--key); color: var(--ink);
+    flex: 1; min-width: 0; height: 52px; border: 0; border-radius: 8px; background: var(--key); color: var(--ink);
     font: inherit; font-weight: 700; font-size: 16px; cursor: pointer; padding: 0;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, .3);
+    transition: transform .08s ease, background-color .3s ease, opacity .3s ease;
   }
+  .key:active { transform: translateY(2px) scale(.96); box-shadow: none; }
   .key.wide { flex: 1.6; font-size: 14px; }
-  .key.s0 { background: var(--absent); color: #fff; opacity: .6; }
-  .key.s1 { background: var(--misplaced); color: #fff; }
+  .key.s0 { background: var(--empty); color: rgba(255, 255, 255, .35); }
+  .key.s1 { background: var(--misplaced); color: var(--misplaced-ink); }
   .key.s2 { background: var(--correct); color: #fff; }
 
   /* Panels */
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; width: 100%; margin-bottom: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; width: 100%; margin-bottom: 14px;
+          animation: fadeUp .35s ease both; }
+  .card:nth-child(2) { animation-delay: .06s; } .card:nth-child(3) { animation-delay: .12s; } .card:nth-child(4) { animation-delay: .18s; }
   .card h2 { font-size: 16px; margin: 0 0 10px; }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); }
@@ -104,7 +121,9 @@
   .mini i.m2 { background: var(--correct); }
   .bars { display: grid; gap: 4px; font-size: 13px; }
   .bar { display: grid; grid-template-columns: 16px 1fr; gap: 6px; align-items: center; }
-  .bar span { background: var(--absent); color: #fff; padding: 2px 6px; border-radius: 4px; text-align: right; min-width: 22px; font-weight: 700; }
+  .bar span { background: var(--absent); color: #fff; padding: 2px 6px; border-radius: 4px; text-align: right; min-width: 22px; font-weight: 700;
+              transform-origin: left; animation: grow .5s var(--ease-out) both; }
+  @keyframes grow { from { transform: scaleX(0); } to { transform: none; } }
   .bar span.hi { background: var(--correct); }
   .dist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 480px) {
@@ -113,19 +132,24 @@
     th, td { padding: 6px 3px; }
     th { font-size: 10px; letter-spacing: 0; }
   }
+  @media (max-width: 400px) { .col-rec { display: none; } }
   .muted { color: var(--muted); font-size: 13px; }
 
   /* Modal */
-  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
-  .modal { background: var(--panel); border-radius: 14px; padding: 20px; width: 100%; max-width: 420px; max-height: 90dvh; overflow: auto; }
+  .overlay { position: fixed; inset: 0; background: rgba(4, 16, 40, .6); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; animation: fadeUp .2s ease both; }
+  .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; width: 100%; max-width: 420px; max-height: 90dvh; overflow: auto; animation: zoomIn .25s var(--ease-out) both; }
   .modal h2 { margin: 0 0 10px; font-size: 19px; }
   .modal input { width: 100%; font: inherit; font-size: 17px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); margin: 8px 0; }
-  .modal .err { color: #d64545; font-size: 14px; min-height: 18px; }
+  .modal .err { color: #ff8a92; font-size: 14px; min-height: 18px; }
+  #end:not(.hidden) { animation: fadeUp .4s ease both; animation-delay: var(--end-delay, 0ms); }
   .demo { display: flex; gap: 4px; margin: 6px 0 12px; }
   .demo .tile { --tile: 34px; }
 
-  #toast { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-weight: 600; z-index: 20; opacity: 0; transition: opacity .2s; pointer-events: none; }
-  #toast.show { opacity: 1; }
+  #toast { position: fixed; top: 70px; left: 50%; transform: translate(-50%, -8px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; z-index: 20; opacity: 0; transition: opacity .2s, transform .25s var(--ease-out); pointer-events: none; }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
   footer { text-align: center; font-size: 11px; color: var(--muted); padding: 6px 16px 10px; }
   footer a { color: inherit; }
 </style>
@@ -172,9 +196,9 @@
     <div class="demo">
       <div class="tile s2">C</div><div class="tile s1"><span>H</span></div><div class="tile s0">A</div><div class="tile s0">T</div><div class="tile s2">S</div>
     </div>
-    <p><b style="color:var(--correct)">Bleu</b> : bonne lettre, bien placée.<br>
-       <b style="color:var(--misplaced)">Rond orange</b> : la lettre est dans le mot, mais ailleurs.<br>
-       <b>Gris</b> : la lettre n'est pas (ou plus) dans le mot.</p>
+    <p><b style="color:var(--correct)">Rouge</b> : bonne lettre, bien placée.<br>
+       <b style="color:var(--misplaced)">Rond jaune</b> : la lettre est dans le mot, mais ailleurs.<br>
+       <b style="color:#8fb0f0">Bleu</b> : la lettre n'est pas (ou plus) dans le mot.</p>
     <p class="muted">Pas d'accents à taper : É = E. Nouveau mot chaque jour à minuit (heure de Paris).</p>
     <button class="btn primary" data-close style="width:100%">Compris</button>
   </div>
@@ -235,6 +259,7 @@ let game = null;      // server state
 let input = '';       // current row being typed
 let busy = false;
 let revealRow = -1;   // row to animate
+let popIndex = -1;    // tile just typed (pop animation)
 let stats = null;
 
 function tileSize(n) {
@@ -262,10 +287,11 @@ function renderGrid() {
     for (let i = 0; i < n; i++) {
       if (r < game.guesses.length) {
         const p = game.patterns[r][i], ch = game.guesses[r][i];
-        const anim = r === revealRow ? ` reveal" style="animation-delay:${i * 90}ms` : '';
+        const win = r === revealRow && game.status === 'won';
+        const anim = r === revealRow ? ` reveal${win ? ' win' : ''}" style="--d:${i * 110}ms;--d2:${n * 110 + 150 + i * 70}ms` : '';
         html += `<div class="tile s${p}${anim}"><span>${ch}</span></div>`;
       } else if (r === game.guesses.length && playing) {
-        if (i < input.length) html += `<div class="tile typed">${input[i]}</div>`;
+        if (i < input.length) html += `<div class="tile typed${i === popIndex ? ' pop' : ''}">${input[i]}</div>`;
         else html += `<div class="tile hint">${known[i] || '·'}</div>`;
       } else {
         html += `<div class="tile"></div>`;
@@ -275,6 +301,7 @@ function renderGrid() {
   }
   grid.innerHTML = html;
   revealRow = -1;
+  popIndex = -1;
 }
 
 const LAYOUT = ['AZERTYUIOP', 'QSDFGHJKLM', '⌫WXCVBN⏎'];
@@ -322,6 +349,9 @@ function renderEnd() {
 function renderGame() {
   $('num').textContent = game ? `#${game.num}` : '';
   if (!game) return;
+  // when a row was just revealed, show the end panel after the flip (and the win jump)
+  const justRevealed = revealRow >= 0;
+  $('end').style.setProperty('--end-delay', justRevealed ? `${game.length * 110 + (game.status === 'won' ? 900 : 450)}ms` : '0ms');
   renderGrid();
   renderKeyboard();
   $('kb').classList.toggle('hidden', game.status !== 'playing');
@@ -351,6 +381,7 @@ async function press(k) {
   else if (/^[A-Z]$/.test(k) && input.length < game.length) {
     if (input.length === 1 && k === game.first) return;   // first letter already given
     input += k;
+    popIndex = input.length - 1;
   }
   renderGrid();
 }
@@ -402,7 +433,7 @@ $('kb').addEventListener('click', (e) => {
 
 // ---------- share ----------
 function shareText() {
-  const icons = { 0: '⬜', 1: '🟠', 2: '🟦' };
+  const icons = { 0: '🟦', 1: '🟡', 2: '🟥' };
   const score = game.status === 'won' ? `${game.guesses.length}/${MAX_TRIES}` : `X/${MAX_TRIES}`;
   const rows = game.patterns.map((p) => [...p].map((c) => icons[c]).join('')).join('\n');
   const r = game.status === 'won' && rarityInfo(game.rarity, game.guesses.length);
@@ -474,13 +505,22 @@ async function loadStats() {
       + `${showGrid ? miniGrid(g.patterns) : ''}</div>`;
   }).join('') : '<div class="muted">Personne n\'a encore joué aujourd\'hui.</div>';
 
-  const rows = stats.players.filter((p) => p.played > 0).map((p, i) => `
+// Average tries over all finished games, a loss counting as 7 (exact, from the distribution).
+const LOSS_TRIES = 7;
+function scoreAvg(p) {
+  const winTries = p.dist.reduce((s, n, i) => s + n * (i + 1), 0);
+  return (winTries + (p.played - p.wins) * LOSS_TRIES) / p.played;
+}
+  // Ranking: lowest average first, then most wins
+  const ranked = stats.players.filter((p) => p.played > 0).sort((a, b) =>
+    scoreAvg(a) - scoreAvg(b) || b.wins - a.wins || a.pseudo.localeCompare(b.pseudo));
+  const rows = ranked.map((p, i) => `
     <tr class="${p.pseudo === me ? 'me' : ''}">
       <td>${i + 1}</td><td>${esc(p.pseudo)}</td>
       <td class="num">${p.played}</td>
       <td class="num">${p.played ? Math.round(p.wins / p.played * 100) : 0} %</td>
-      <td class="num">${p.avg ?? '–'}</td>
-      <td class="num">${p.streak}</td><td class="num">${p.best}</td>
+      <td class="num">${scoreAvg(p).toFixed(2).replace('.', ',')}</td>
+      <td class="num">${p.streak}</td><td class="num col-rec">${p.best}</td>
       <td class="num">${p.best_rarity ? `1/${p.best_rarity}` : '–'}</td>
     </tr>`).join('');
 
@@ -496,9 +536,9 @@ async function loadStats() {
     <section class="card">
       <h2>Classement</h2>
       ${rows ? `<div class="table-wrap"><table>
-        <thead><tr><th>#</th><th>Joueur</th><th class="num">Parties</th><th class="num">Victoires</th><th class="num">Moy.</th><th class="num">Série</th><th class="num">Record</th><th class="num">Coup</th></tr></thead>
+        <thead><tr><th>#</th><th>Joueur</th><th class="num">Parties</th><th class="num">Victoires</th><th class="num">Moy.</th><th class="num">Série</th><th class="num col-rec">Record</th><th class="num">Coup</th></tr></thead>
         <tbody>${rows}</tbody></table></div>
-        <p class="muted">Classé par nombre de victoires, puis par moyenne d'essais. Série = jours gagnés d'affilée. Coup = victoire la plus improbable (1 chance sur N de trouver avec les indices qu'on avait).</p>`
+        <p class="muted">Classé par moyenne d'essais (le plus bas en tête, une défaite compte 7), puis par nombre de victoires. Série = jours gagnés d'affilée. Coup = victoire la plus improbable (1 chance sur N de trouver avec les indices qu'on avait).</p>`
         : '<div class="muted">Pas encore de partie terminée.</div>'}
     </section>
     <section class="card">
