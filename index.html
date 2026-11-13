@@ -2,7 +2,8 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c2d63">
 <title>Le Mot du Jour</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,59 +15,85 @@
     --empty: #0a2550; --absent: #3d6fd0; --misplaced: #ffc83d; --misplaced-ink: #1c1a12; --correct: #e63946;
     --key: #1f4a93; --accent: #ffc83d; --accent-ink: #1c1a12;
     --ease-out: cubic-bezier(.2, .9, .3, 1.2);
+    --app-h: 100dvh;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; }
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
+  html, body { margin: 0; width: 100%; overflow-x: hidden; }
   body {
     background: radial-gradient(120% 80% at 50% 0%, var(--bg2) 0%, var(--bg) 60%) fixed, var(--bg);
     color: var(--ink);
     font-family: "Outfit", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    display: flex; flex-direction: column; min-height: 100dvh;
+    min-height: var(--app-h);
     -webkit-tap-highlight-color: transparent;
   }
   header {
+    position: sticky; top: 0; z-index: 5;
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    padding: 10px 16px; border-bottom: 1px solid var(--line); background: rgba(10, 37, 80, .55);
-    backdrop-filter: blur(6px);
+    padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top));
+    border-bottom: 1px solid var(--line); background: rgba(10, 37, 80, .85); backdrop-filter: blur(6px);
   }
-  header h1 { font-size: 20px; margin: 0; letter-spacing: .04em; white-space: nowrap; }
-  @media (max-width: 360px) { header h1 { font-size: 16px; letter-spacing: 0; } nav button { padding: 6px 9px; } }
+  header h1 { font-size: 20px; margin: 0; letter-spacing: .03em; white-space: nowrap; }
   header h1 small { font-weight: 500; color: var(--muted); font-size: 14px; margin-left: 6px; }
+  @media (max-width: 360px) { header h1 { font-size: 16px; letter-spacing: 0; } }
   nav { display: flex; gap: 6px; }
   nav button, .btn {
-    font: inherit; font-size: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
-    border-radius: 8px; padding: 7px 12px; cursor: pointer;
+    font: inherit; font-size: 15px; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+    border-radius: 10px; padding: 8px 12px; cursor: pointer;
     transition: transform .12s ease, background-color .2s ease, filter .2s ease;
   }
   nav button:hover, .btn:hover { filter: brightness(1.12); }
   nav button:active, .btn:active { transform: scale(.95); }
   nav button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .btn.big { font-size: 18px; padding: 14px 28px; border-radius: 14px; }
   .btn:disabled { opacity: .5; cursor: default; }
-  main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 16px; width: 100%; max-width: 720px; margin: 0 auto; }
   .hidden { display: none !important; }
 
-  /* Grid */
-  #grid { display: grid; gap: 5px; margin: 8px 0 12px; }
-  .row { display: grid; grid-template-columns: repeat(var(--n), var(--tile)); gap: 5px; }
+  /* ---------- Game view: fills the visible screen, no page scroll ---------- */
+  #view-game {
+    display: flex; flex-direction: column; width: 100%; max-width: 600px; margin: 0 auto;
+    height: calc(var(--app-h) - var(--header-h, 56px)); padding: 6px 4px 0; overflow: hidden;
+  }
+  #view-game.done { overflow-y: auto; }
+  #bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; padding: 0 4px; }
+  #msg { font-size: 15px; color: var(--muted); }
+  #bar-right { display: flex; align-items: center; gap: 8px; }
+  #timer { display: flex; align-items: center; gap: 6px; font-weight: 800; font-variant-numeric: tabular-nums; font-size: 18px;
+           padding: 4px 10px; border-radius: 999px; background: var(--empty); border: 1px solid var(--line); }
+  #timer.warn { color: var(--misplaced); border-color: var(--misplaced); }
+  #timer.danger { color: #fff; background: var(--correct); border-color: var(--correct); animation: pulse 1s ease infinite; }
+  #tbar { height: 4px; border-radius: 2px; background: var(--empty); margin: 2px 4px 0; overflow: hidden; }
+  #tbar i { display: block; height: 100%; background: var(--accent); transform-origin: left; transition: transform .25s linear; }
+  #btn-native { font-size: 18px; padding: 4px 10px; }
+  #board { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px 0; }
+  #view-game.done #board { flex: 0 0 auto; }
+
+  /* Grid: [note spacer][tiles][note] keeps the tiles centred */
+  #grid { display: grid; gap: var(--gap, 5px); }
+  .row { display: grid; grid-template-columns: var(--lside) repeat(var(--n), var(--tile)) var(--side); gap: var(--gap, 5px); align-items: center; }
   .row.shake { animation: shake .35s; }
   .tile {
-    width: var(--tile); height: var(--tile); border-radius: 10px; background: var(--empty);
+    width: var(--tile); height: var(--tile); border-radius: calc(var(--tile) * .18); background: var(--empty);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08), 0 2px 0 rgba(0, 0, 0, .25);
     display: flex; align-items: center; justify-content: center; position: relative;
-    font-weight: 800; font-size: calc(var(--tile) * .52); text-transform: uppercase; user-select: none;
+    font-weight: 800; font-size: calc(var(--tile) * .54); text-transform: uppercase; user-select: none;
   }
   .tile.hint { color: var(--muted); opacity: .5; }
   .tile.typed { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .55), 0 2px 0 rgba(0, 0, 0, .25); }
+  .tile.cursor { box-shadow: inset 0 0 0 2px var(--accent); }
   .tile.pop { animation: pop .14s var(--ease-out); }
   .tile.s0 { background: var(--absent); color: rgba(255, 255, 255, .85); }
   .tile.s2 { background: var(--correct); color: #fff; box-shadow: 0 2px 0 rgba(0, 0, 0, .3), 0 0 14px rgba(230, 57, 70, .35); }
   .tile.s1 { background: var(--absent); color: var(--ink); }
-  .tile.s1::before {
-    content: ""; position: absolute; inset: 6%; border-radius: 50%; background: var(--misplaced); z-index: 0;
-  }
+  .tile.s1::before { content: ""; position: absolute; inset: 6%; border-radius: 50%; background: var(--misplaced); z-index: 0; }
   .tile.s1 span { position: relative; z-index: 1; color: var(--misplaced-ink); }
-  /* reveal: flip each tile one after the other; win: then a little jump */
+  .tile.sT { background: repeating-linear-gradient(45deg, #0a2550 0 6px, #102f63 6px 12px); color: var(--muted); font-size: calc(var(--tile) * .4); }
+  .note { justify-self: start; font-size: 12px; font-weight: 800; min-width: 28px; text-align: center; padding: 3px 4px; border-radius: 8px;
+          background: var(--empty); color: var(--muted); border: 1px solid var(--line); }
+  .note.n-mid { color: var(--misplaced); border-color: rgba(255, 200, 61, .5); }
+  .note.n-hi { color: #fff; background: var(--correct); border-color: var(--correct); }
+  .note.in { animation: zoomIn .3s var(--ease-out) both; animation-delay: var(--d, 0ms); }
   .tile.reveal { animation: flip .45s ease both; animation-delay: var(--d, 0ms); }
   .tile.reveal.win { animation: flip .45s ease both, jump .5s var(--ease-out) both; animation-delay: var(--d, 0ms), var(--d2, 0ms); }
   @keyframes flip { 0% { transform: perspective(400px) rotateX(-90deg); filter: brightness(.6); } 100% { transform: perspective(400px) rotateX(0); filter: none; } }
@@ -74,88 +101,107 @@
   @keyframes jump { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-28%); } 70% { transform: translateY(4%); } }
   @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-  @keyframes zoomIn { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
+  @keyframes zoomIn { from { opacity: 0; transform: scale(.8); } to { opacity: 1; transform: none; } }
+  @keyframes pulse { 50% { transform: scale(1.06); } }
 
-  #msg { min-height: 22px; font-size: 15px; color: var(--muted); text-align: center; }
-  #end { text-align: center; margin: 4px 0 10px; }
-  #end .word { font-size: 22px; font-weight: 800; letter-spacing: .12em; }
+  /* Start screen */
+  #start { text-align: center; padding: 16px; max-width: 360px; animation: fadeUp .35s ease both; }
+  #start .big-tiles { display: flex; gap: 6px; justify-content: center; margin: 12px 0 16px; flex-wrap: wrap; }
+  #start .big-tiles .tile { --tile: 38px; }
+  #start p { margin: 6px 0; }
+
+  #end { text-align: center; margin: 8px auto 12px; padding: 0 8px; }
+  #end:not(.hidden) { animation: fadeUp .4s ease both; animation-delay: var(--end-delay, 0ms); }
+  #end .word { font-size: 24px; font-weight: 800; letter-spacing: .12em; }
+  #end .pts { font-size: 18px; font-weight: 800; color: var(--accent); }
   #end p { margin: 6px 0; }
 
-  /* Keyboard */
-  #kb { width: 100%; max-width: 520px; margin-top: auto; padding-bottom: env(safe-area-inset-bottom); }
+  /* Keyboard: centred, big keys */
+  #kb { width: 100%; max-width: 560px; margin: 0 auto; padding: 4px 2px calc(6px + env(safe-area-inset-bottom)); }
   .kb-row { display: flex; gap: 5px; justify-content: center; margin-bottom: 6px; }
   .key {
-    flex: 1; min-width: 0; height: 52px; border: 0; border-radius: 8px; background: var(--key); color: var(--ink);
-    font: inherit; font-weight: 700; font-size: 16px; cursor: pointer; padding: 0;
-    box-shadow: 0 2px 0 rgba(0, 0, 0, .3);
-    transition: transform .08s ease, background-color .3s ease, opacity .3s ease;
+    flex: 1 1 0; min-width: 0; height: clamp(46px, 7.2vh, 60px); border: 0; border-radius: 9px; background: var(--key); color: var(--ink);
+    font: inherit; font-weight: 700; font-size: 19px; cursor: pointer; padding: 0;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, .3); touch-action: manipulation; -webkit-user-select: none; user-select: none;
+    transition: transform .08s ease, background-color .3s ease;
   }
-  .key:active { transform: translateY(2px) scale(.96); box-shadow: none; }
-  .key.wide { flex: 1.6; font-size: 14px; }
+  .key:active, .key.down { transform: translateY(2px) scale(.96); box-shadow: none; }
+  .key.wide { flex: 1.6 1 0; font-size: 15px; }
   .key.s0 { background: var(--empty); color: rgba(255, 255, 255, .35); }
   .key.s1 { background: var(--misplaced); color: var(--misplaced-ink); }
   .key.s2 { background: var(--correct); color: #fff; }
+  body.native #kb { display: none; }
 
-  /* Panels */
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; width: 100%; margin-bottom: 14px;
-          animation: fadeUp .35s ease both; }
+  /* Hidden input that opens the phone's own keyboard */
+  #native { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; font-size: 16px; border: 0; padding: 0; }
+
+  /* ---------- Stats ---------- */
+  #view-stats { width: 100%; max-width: 720px; margin: 0 auto; padding: 12px 12px calc(16px + env(safe-area-inset-bottom)); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; width: 100%; margin-bottom: 14px; animation: fadeUp .35s ease both; }
   .card:nth-child(2) { animation-delay: .06s; } .card:nth-child(3) { animation-delay: .12s; } .card:nth-child(4) { animation-delay: .18s; }
-  .card h2 { font-size: 16px; margin: 0 0 10px; }
+  .card h2 { font-size: 17px; margin: 0 0 10px; }
+  .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .pager b { font-size: 16px; text-align: center; flex: 1; }
+  .pager button { min-width: 40px; }
+  .muted { color: var(--muted); font-size: 13px; }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); }
-  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+  th, td { text-align: left; padding: 8px 5px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .02em; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  tr.me td { font-weight: 700; }
+  td.pts { font-weight: 800; color: var(--accent); }
+  tr.me td { background: rgba(255, 200, 61, .08); }
   .table-wrap { overflow-x: auto; }
-  .today-list { display: flex; flex-wrap: wrap; gap: 12px; }
-  .today-item { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 120px; }
-  .today-item .who { font-weight: 700; font-size: 14px; }
-  .today-item .res { color: var(--muted); font-size: 13px; margin-bottom: 4px; }
-  .today-item .rar { font-size: 12px; margin-bottom: 4px; }
-  .today-item.lucky { border-color: var(--misplaced); box-shadow: 0 0 0 1px var(--misplaced); }
-  #end .rarity { font-size: 15px; }
-  .mini { display: grid; gap: 2px; }
-  .mini div { display: flex; gap: 2px; }
-  .mini i { width: 10px; height: 10px; border-radius: 2px; background: var(--absent); display: block; }
-  .mini i.m1 { background: var(--misplaced); border-radius: 50%; }
-  .mini i.m2 { background: var(--correct); }
+  .res-list { display: grid; gap: 12px; }
+  .res { border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+  .res.me { border-color: var(--accent); }
+  .res-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .res-head .who { font-weight: 800; }
+  .res-head .sum { font-size: 14px; color: var(--muted); }
+  .res-head .sum b { color: var(--accent); }
+  .mrows { display: grid; gap: 3px; }
+  .mrow { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 24px)) 40px; gap: 3px; align-items: center; }
+  .mt { aspect-ratio: 1; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800;
+        background: var(--absent); color: #fff; position: relative; }
+  .mt.m2 { background: var(--correct); }
+  .mt.m1::before { content: ""; position: absolute; inset: 6%; border-radius: 50%; background: var(--misplaced); }
+  .mt.m1 span { position: relative; color: var(--misplaced-ink); }
+  .mt.mT { background: repeating-linear-gradient(45deg, #0a2550 0 4px, #102f63 4px 8px); }
+  .mt.hid { background: var(--empty); }
+  .mrow .note { font-size: 11px; min-width: 0; margin-left: 4px; }
   .bars { display: grid; gap: 4px; font-size: 13px; }
   .bar { display: grid; grid-template-columns: 16px 1fr; gap: 6px; align-items: center; }
   .bar span { background: var(--absent); color: #fff; padding: 2px 6px; border-radius: 4px; text-align: right; min-width: 22px; font-weight: 700;
               transform-origin: left; animation: grow .5s var(--ease-out) both; }
-  @keyframes grow { from { transform: scaleX(0); } to { transform: none; } }
   .bar span.hi { background: var(--correct); }
+  @keyframes grow { from { transform: scaleX(0); } to { transform: none; } }
   .dist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 480px) {
     .dist-grid { grid-template-columns: 1fr; }
     table { font-size: 13px; }
-    th, td { padding: 6px 3px; }
+    th, td { padding: 7px 3px; }
     th { font-size: 10px; letter-spacing: 0; }
   }
-  @media (max-width: 400px) { .col-rec { display: none; } }
-  .muted { color: var(--muted); font-size: 13px; }
 
   /* Modal */
   .overlay { position: fixed; inset: 0; background: rgba(4, 16, 40, .6); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; animation: fadeUp .2s ease both; }
   .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; width: 100%; max-width: 420px; max-height: 90dvh; overflow: auto; animation: zoomIn .25s var(--ease-out) both; }
   .modal h2 { margin: 0 0 10px; font-size: 19px; }
-  .modal input { width: 100%; font: inherit; font-size: 17px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); margin: 8px 0; }
+  .modal input { width: 100%; font: inherit; font-size: 17px; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); margin: 8px 0; }
   .modal .err { color: #ff8a92; font-size: 14px; min-height: 18px; }
-  #end:not(.hidden) { animation: fadeUp .4s ease both; animation-delay: var(--end-delay, 0ms); }
   .demo { display: flex; gap: 4px; margin: 6px 0 12px; }
   .demo .tile { --tile: 34px; }
 
-  #toast { position: fixed; top: 70px; left: 50%; transform: translate(-50%, -8px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; z-index: 20; opacity: 0; transition: opacity .2s, transform .25s var(--ease-out); pointer-events: none; }
+  #toast { position: fixed; top: 76px; left: 50%; transform: translate(-50%, -8px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; z-index: 20; opacity: 0; transition: opacity .2s, transform .25s var(--ease-out); pointer-events: none; max-width: calc(100vw - 32px); text-align: center; }
   #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .credits { text-align: center; font-size: 11px; color: var(--muted); margin-top: 8px; }
+  .credits a { color: inherit; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
   }
-  footer { text-align: center; font-size: 11px; color: var(--muted); padding: 6px 16px 10px; }
-  footer a { color: inherit; }
 </style>
 </head>
 <body>
-<header>
+<header id="top">
   <h1>Le Mot du Jour<small id="num"></small></h1>
   <nav>
     <button id="tab-game" aria-pressed="true">Jeu</button>
@@ -165,15 +211,25 @@
 </header>
 
 <main id="view-game">
-  <div id="msg">Chargement…</div>
-  <div id="grid"></div>
+  <div id="bar">
+    <span id="msg">Chargement…</span>
+    <span id="bar-right">
+      <button class="btn hidden" id="btn-native" aria-label="Utiliser le clavier du téléphone" title="Clavier du téléphone">⌨️</button>
+      <span id="timer" class="hidden">⏱ <span id="timer-txt">2:00</span></span>
+    </span>
+  </div>
+  <div id="tbar" class="hidden"><i></i></div>
+  <div id="board">
+    <div id="start" class="hidden"></div>
+    <div id="grid"></div>
+  </div>
   <div id="end" class="hidden"></div>
   <div id="kb"></div>
 </main>
 
 <main id="view-stats" class="hidden"></main>
 
-<footer>Dictionnaire : <a href="http://www.lexique.org" target="_blank" rel="noopener">Lexique 3.83</a> (CC BY-SA 4.0)</footer>
+<input id="native" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" enterkeyhint="send" aria-label="Saisie">
 
 <div id="modal-register" class="overlay hidden">
   <form class="modal" id="form-register">
@@ -192,14 +248,17 @@
 <div id="modal-help" class="overlay hidden">
   <div class="modal">
     <h2>Comment jouer</h2>
-    <p>Un mot par jour, le même pour tout le groupe. La première lettre est donnée, tu as <b>6 essais</b>. Chaque essai doit être un mot français qui commence par cette lettre.</p>
+    <p>Un mot par jour, le même pour tout le groupe. La première lettre est donnée, tu as <b>6 essais</b> et <b>2 minutes par essai</b> : passé ce délai, l'essai est perdu. Chaque essai doit être un mot français qui commence par la lettre donnée.</p>
     <div class="demo">
       <div class="tile s2">C</div><div class="tile s1"><span>H</span></div><div class="tile s0">A</div><div class="tile s0">T</div><div class="tile s2">S</div>
     </div>
     <p><b style="color:var(--correct)">Rouge</b> : bonne lettre, bien placée.<br>
        <b style="color:var(--misplaced)">Rond jaune</b> : la lettre est dans le mot, mais ailleurs.<br>
        <b style="color:#8fb0f0">Bleu</b> : la lettre n'est pas (ou plus) dans le mot.</p>
-    <p class="muted">Pas d'accents à taper : É = E. Nouveau mot chaque jour à minuit (heure de Paris).</p>
+    <p><b>Note sur 100 de chaque essai</b> : 100 = mot trouvé. Sinon, elle mesure combien de mots possibles ton essai a éliminés (0 = il ne t'a rien appris).</p>
+    <p><b>Points du jour</b> : 100 en 1 essai, 80 en 2, 65 en 3, 50 en 4, 35 en 5, 20 en 6, 0 si perdu. Le classement additionne les points du mois et repart à zéro chaque 1<sup>er</sup> du mois.</p>
+    <p class="muted">Pas d'accents à taper : É = E. Sur téléphone, le bouton ⌨️ ouvre le clavier du téléphone. Nouveau mot chaque jour à minuit (heure de Paris).</p>
+    <p class="credits">Dictionnaire : <a href="http://www.lexique.org" target="_blank" rel="noopener">Lexique 3.83</a> (CC BY-SA 4.0)</p>
     <button class="btn primary" data-close style="width:100%">Compris</button>
   </div>
 </div>
@@ -213,6 +272,7 @@ const SUPABASE_KEY = 'sb_publishable_BMfTUJ5sj2oTZshhR4jUpg_FOuy0w-Z';   // "ano
 // ================================================================
 
 const MAX_TRIES = 6;
+const TURN_MS = 120000;
 const TOKEN_KEY = 'mdj_token';
 const $ = (id) => document.getElementById(id);
 
@@ -220,7 +280,9 @@ const ERRORS = {
   NOT_IN_DICT: "Ce mot n'est pas dans le dictionnaire",
   BAD_FIRST: 'Le mot doit commencer par la lettre donnée',
   BAD_LENGTH: 'Mot incomplet',
-  GAME_OVER: 'Partie déjà terminée',
+  GAME_OVER: 'Partie terminée',
+  ALREADY_TRIED: 'Tu as déjà essayé ce mot',
+  NOT_STARTED: "Clique d'abord sur Commencer",
   NO_WORD: "Pas de mot programmé aujourd'hui",
   BAD_PSEUDO: 'Pseudo de 2 à 16 caractères (lettres, chiffres, espace, - ou _)',
   PSEUDO_TAKEN: 'Ce pseudo est déjà pris',
@@ -260,46 +322,79 @@ let input = '';       // current row being typed
 let busy = false;
 let revealRow = -1;   // row to animate
 let popIndex = -1;    // tile just typed (pop animation)
-let stats = null;
+let deadline = 0;     // performance.now() when the current try's 2 minutes end
+let refreshing = false;
 
-function tileSize(n) {
-  const avail = Math.min(window.innerWidth, 720) - 32;
-  const availH = window.innerHeight - 330;   // header + keyboard + messages
-  return Math.max(18, Math.min(58, Math.floor((avail - 5 * (n - 1)) / n), Math.floor((availH - 5 * 5) / 6)));
+// ---------- layout: fit the visible screen (also when the phone keyboard is open) ----------
+function fitScreen() {
+  const vv = window.visualViewport;
+  const h = vv ? vv.height : window.innerHeight;
+  document.documentElement.style.setProperty('--app-h', h + 'px');
+  document.documentElement.style.setProperty('--header-h', $('top').offsetHeight + 'px');
+  if (document.body.classList.contains('native')) window.scrollTo(0, 0);
+  if (game) sizeGrid();
+}
+function sizeGrid() {
+  const n = game.length, grid = $('grid'), board = $('board');
+  const gap = n > 9 ? 3 : 5;
+  const side = 28;   // note column on the right
+  const avail = Math.min(board.clientWidth || window.innerWidth, 600);
+  // left spacer keeps the tiles centred, unless the word is long and the screen narrow
+  const lside = avail - 2 * (side + gap) >= n * 34 ? side : 0;
+  const w = avail - side - lside - 2 * gap;
+  const done = game.status !== 'playing';
+  const h = done ? 9999 : (board.clientHeight || 400) - 12;
+  const tile = Math.max(16, Math.min(64, Math.floor((w - gap * (n - 1)) / n), Math.floor((h - gap * 5) / 6)));
+  grid.style.setProperty('--n', n);
+  grid.style.setProperty('--gap', gap + 'px');
+  grid.style.setProperty('--side', side + 'px');
+  grid.style.setProperty('--lside', lside + 'px');
+  grid.style.setProperty('--tile', (done ? Math.min(tile, 44) : tile) + 'px');
+}
+window.addEventListener('resize', fitScreen);
+if (window.visualViewport) {
+  visualViewport.addEventListener('resize', fitScreen);
+  visualViewport.addEventListener('scroll', () => { if (document.body.classList.contains('native')) window.scrollTo(0, 0); });
 }
 
+// ---------- rendering ----------
 function knownLetters() {
   const known = Array(game.length).fill('');
   known[0] = game.first;
   game.guesses.forEach((g, r) => [...game.patterns[r]].forEach((p, i) => { if (p === '2') known[i] = g[i]; }));
   return known;
 }
+function noteClass(v) { return v >= 70 ? 'n-hi' : v >= 35 ? 'n-mid' : ''; }
 
 function renderGrid() {
-  const n = game.length, grid = $('grid');
-  grid.style.setProperty('--n', n);
-  grid.style.setProperty('--tile', tileSize(n) + 'px');
+  const n = game.length;
+  sizeGrid();
   const known = knownLetters();
   const playing = game.status === 'playing';
   let html = '';
   for (let r = 0; r < MAX_TRIES; r++) {
-    html += `<div class="row" data-r="${r}">`;
+    html += `<div class="row" data-r="${r}"><span></span>`;
     for (let i = 0; i < n; i++) {
       if (r < game.guesses.length) {
-        const p = game.patterns[r][i], ch = game.guesses[r][i];
+        const p = game.patterns[r];
+        if (p === 'T') { html += `<div class="tile sT">${i === 0 ? '⏱' : ''}</div>`; continue; }
         const win = r === revealRow && game.status === 'won';
         const anim = r === revealRow ? ` reveal${win ? ' win' : ''}" style="--d:${i * 110}ms;--d2:${n * 110 + 150 + i * 70}ms` : '';
-        html += `<div class="tile s${p}${anim}"><span>${ch}</span></div>`;
-      } else if (r === game.guesses.length && playing) {
+        html += `<div class="tile s${p[i]}${anim}"><span>${game.guesses[r][i]}</span></div>`;
+      } else if (r === game.guesses.length && playing && game.started) {
         if (i < input.length) html += `<div class="tile typed${i === popIndex ? ' pop' : ''}">${input[i]}</div>`;
-        else html += `<div class="tile hint">${known[i] || '·'}</div>`;
+        else html += `<div class="tile hint${i === input.length ? ' cursor' : ''}">${known[i] || '·'}</div>`;
       } else {
         html += `<div class="tile"></div>`;
       }
     }
+    const note = game.notes && game.notes[r];
+    html += r < game.guesses.length && note != null
+      ? `<span class="note ${noteClass(note)}${r === revealRow ? ' in' : ''}" style="--d:${n * 110}ms" title="Note de l'essai">${note}</span>`
+      : '<span></span>';
     html += '</div>';
   }
-  grid.innerHTML = html;
+  $('grid').innerHTML = html;
   revealRow = -1;
   popIndex = -1;
 }
@@ -307,8 +402,8 @@ function renderGrid() {
 const LAYOUT = ['AZERTYUIOP', 'QSDFGHJKLM', '⌫WXCVBN⏎'];
 function renderKeyboard() {
   const best = {};
-  if (game) game.guesses.forEach((g, r) => [...g].forEach((ch, i) => {
-    best[ch] = Math.max(best[ch] ?? -1, +game.patterns[r][i]);
+  game.guesses.forEach((g, r) => [...g].forEach((ch, i) => {
+    if (game.patterns[r] !== 'T') best[ch] = Math.max(best[ch] ?? -1, +game.patterns[r][i]);
   }));
   $('kb').innerHTML = LAYOUT.map((row) => `<div class="kb-row">${[...row].map((k) => {
     if (k === '⌫') return `<button class="key wide" data-k="BACK" aria-label="Effacer">⌫</button>`;
@@ -317,16 +412,15 @@ function renderKeyboard() {
   }).join('')}</div>`).join('');
 }
 
-// Rarity = number of possible words left just before the winning guess (1 chance in N).
-// Found on the first try is always legendary. Groups (same length + first letter) hold at most ~250 words.
-function rarityInfo(n, tries) {
-  if (!n) return null;
-  const tiers = [[100, '🌟', 'Légendaire'], [40, '💎', 'Épique'], [12, '🔷', 'Rare'], [4, '🟢', 'Peu commun'], [2, '⚪', 'Commun'], [1, '🧠', 'Logique']];
-  let [, icon, label] = tiers.find(([min]) => n >= min);
-  if (tries === 1) { icon = '🌟'; label = 'Légendaire'; }
-  const text = tries === 1 ? `trouvé du premier coup, 1 chance sur ${n}`
-    : n === 1 ? 'il ne restait qu\'un mot possible' : `1 chance sur ${n}`;
-  return { icon, label, text, short: `1/${n}` };
+function renderStart() {
+  const tiles = Array.from({ length: game.length }, (_, i) => `<div class="tile ${i === 0 ? 's2' : ''}">${i === 0 ? `<span>${game.first}</span>` : ''}</div>`).join('');
+  $('start').innerHTML = `
+    <h2 style="margin:0">Mot du jour #${game.num}</h2>
+    <div class="big-tiles">${tiles}</div>
+    <p><b>${game.length} lettres</b>, commence par <b>${game.first}</b>.</p>
+    <p class="muted">6 essais · <b>2 minutes max par essai</b>. Le chrono démarre dès que tu cliques, et continue même si tu fermes la page.</p>
+    <p style="margin-top:16px"><button class="btn primary big" id="btn-start">Commencer</button></p>`;
+  $('btn-start').onclick = startGame;
 }
 
 function renderEnd() {
@@ -337,9 +431,9 @@ function renderEnd() {
   end.innerHTML = `
     <p>${won ? `Bravo, trouvé en ${game.guesses.length}/${MAX_TRIES} !` : 'Perdu… le mot était'}</p>
     <div class="word">${game.word}</div>
-    ${won && game.rarity ? (() => { const r = rarityInfo(game.rarity, game.guesses.length); return `<p class="rarity"><b>${r.icon} ${r.label}</b> · ${r.text}</p>`; })() : ''}
+    <p class="pts">+${game.points ?? 0} points</p>
     <p><button class="btn primary" id="btn-share">Partager mon résultat</button>
-       <button class="btn" id="btn-see-stats">Voir les stats</button></p>
+       <button class="btn" id="btn-see-stats">Voir les essais de tous</button></p>
     <p class="muted">Prochain mot dans <span id="countdown"></span></p>`;
   $('btn-share').onclick = share;
   $('btn-see-stats').onclick = () => showView('stats');
@@ -349,53 +443,101 @@ function renderEnd() {
 function renderGame() {
   $('num').textContent = game ? `#${game.num}` : '';
   if (!game) return;
-  // when a row was just revealed, show the end panel after the flip (and the win jump)
+  const playing = game.status === 'playing';
+  const showStart = playing && !game.started;
   const justRevealed = revealRow >= 0;
   $('end').style.setProperty('--end-delay', justRevealed ? `${game.length * 110 + (game.status === 'won' ? 900 : 450)}ms` : '0ms');
-  renderGrid();
-  renderKeyboard();
-  $('kb').classList.toggle('hidden', game.status !== 'playing');
+  $('view-game').classList.toggle('done', !playing);
+  $('start').classList.toggle('hidden', !showStart);
+  $('grid').classList.toggle('hidden', showStart);
+  $('kb').classList.toggle('hidden', !playing || showStart);
+  $('btn-native').classList.toggle('hidden', !playing || showStart);
+  $('timer').classList.toggle('hidden', !playing || showStart);
+  $('tbar').classList.toggle('hidden', !playing || showStart);
+  if (!playing || showStart) setNative(false);
+  if (showStart) renderStart();
+  else { renderGrid(); renderKeyboard(); }
   renderEnd();
-  if (game.status === 'playing') {
-    setMsg(game.guesses.length ? `Essai ${game.guesses.length + 1}/${MAX_TRIES}` : `Mot de ${game.length} lettres`);
-  } else setMsg('');
+  if (showStart) setMsg('Prêt ?');
+  else if (playing) setMsg(`Essai ${game.guesses.length + 1}/${MAX_TRIES}`);
+  else setMsg('');
+  deadline = playing && game.remaining_ms != null ? performance.now() + game.remaining_ms : 0;
+  tickTimer();
 }
 
 function setMsg(t) { $('msg').textContent = t; }
-function toast(t) {
+function toast(t, ms = 1800) {
   const el = $('toast'); el.textContent = t; el.classList.add('show');
-  clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove('show'), 1800);
+  clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove('show'), ms);
 }
 function shakeRow() {
   const row = document.querySelector(`.row[data-r="${game.guesses.length}"]`);
   if (row) { row.classList.remove('shake'); void row.offsetWidth; row.classList.add('shake'); }
+  if (navigator.vibrate) navigator.vibrate([30, 40, 30]);
 }
 
+// ---------- timer (the server is the referee; this only displays it) ----------
+function tickTimer() {
+  if (!game || game.status !== 'playing' || !game.started || !deadline) return;
+  const left = deadline - performance.now();
+  const s = Math.max(0, Math.ceil(left / 1000));
+  $('timer-txt').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  $('timer').classList.toggle('warn', s <= 30 && s > 10);
+  $('timer').classList.toggle('danger', s <= 10);
+  $('tbar').firstElementChild.style.transform = `scaleX(${Math.max(0, left / TURN_MS)})`;
+  // server keeps a 3 s grace: ask it once the grace is over
+  if (left < -3500 && !refreshing && !busy) refreshAfterTimeout();
+}
+let stateSeq = 0;   // ignores a game_state answer that arrives after a newer guess
+async function refreshAfterTimeout() {
+  refreshing = true;
+  const before = game.guesses.length;
+  const mySeq = ++stateSeq;
+  try {
+    const next = await rpc('game_state', { p_token: getToken() });
+    if (mySeq !== stateSeq || busy) return;
+    if (next.guesses.length > before) { toast('⏱ Temps écoulé : essai perdu', 2500); if (navigator.vibrate) navigator.vibrate(200); }
+    game = next;
+    resetInput();
+    renderGame();
+  } catch (e) {
+    deadline = performance.now() + 1500;   // retry in ~5 s, not every 250 ms
+    await handleError(e);
+  }
+  finally { refreshing = false; }
+}
+setInterval(tickTimer, 250);
+
 // ---------- input ----------
-function resetInput() { input = game ? game.first : ''; }
+function resetInput() { input = game ? game.first : ''; syncNative(); }
 
 async function press(k) {
-  if (!game || game.status !== 'playing' || busy) return;
+  if (!game || game.status !== 'playing' || !game.started || busy) return;
   if (k === 'BACK') { if (input.length > 1) input = input.slice(0, -1); }
   else if (k === 'ENTER') { await submit(); return; }
   else if (/^[A-Z]$/.test(k) && input.length < game.length) {
     if (input.length === 1 && k === game.first) return;   // first letter already given
     input += k;
     popIndex = input.length - 1;
+    if (navigator.vibrate) navigator.vibrate(8);
   }
+  syncNative();
   renderGrid();
 }
 
 async function submit() {
+  if (busy || !game || game.status !== 'playing' || !game.started) return;
   if (input.length < game.length) { toast(`Il faut ${game.length} lettres`); shakeRow(); return; }
   busy = true;
+  ++stateSeq;
   try {
+    const before = game.guesses.length;
     const next = await rpc('guess', { p_token: getToken(), p_day: game.day, p_word: input });
-    revealRow = game.guesses.length;
+    revealRow = next.guesses.length - 1;
+    if (next.guesses.length - before > 1) toast('⏱ Un essai a été perdu au chrono', 2500);
     game = next;
     resetInput();
     renderGame();
-    stats = null;
     if (game.status === 'won') toast(['Génial !', 'Magnifique !', 'Superbe !', 'Bien joué !', 'Ouf !', 'De justesse !'][game.guesses.length - 1]);
   } catch (e) {
     await handleError(e);
@@ -406,39 +548,79 @@ async function handleError(e) {
   const code = e.message;
   if (code === 'NEW_DAY') { toast('Nouveau mot du jour !'); await loadGame(); return; }
   if (code === 'NOT_ALLOWED') { logout(); return; }
+  if (code === 'GAME_OVER' || code === 'NOT_STARTED') { toast(ERRORS[code]); await loadGame(); return; }
   if (code === 'NETWORK') { toast('Connexion impossible, réessaie'); return; }
   toast(ERRORS[code] || 'Erreur : ' + code);
-  if (code === 'NOT_IN_DICT' || code === 'BAD_FIRST') shakeRow();
+  if (code === 'NOT_IN_DICT' || code === 'BAD_FIRST' || code === 'ALREADY_TRIED') shakeRow();
 }
 
+async function startGame() {
+  if (busy) return;
+  busy = true;
+  try { game = await rpc('start_game', { p_token: getToken() }); resetInput(); renderGame(); }
+  catch (e) { await handleError(e); }
+  finally { busy = false; }
+}
+
+function normKey(k) { return k.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase(); }
 document.addEventListener('keydown', (e) => {
+  if (e.target === $('native')) return;   // handled by the native input
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (document.querySelector('.overlay:not(.hidden)')) return;
   if ($('view-game').classList.contains('hidden')) return;
-  if (!game || game.status !== 'playing') return;
+  if (!game || game.status !== 'playing' || !game.started) return;
   let k = e.key;
   if (k === 'Enter') k = 'ENTER';
   else if (k === 'Backspace') k = 'BACK';
-  else {
-    k = k.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
-    if (!/^[A-Z]$/.test(k)) return;
-  }
+  else { k = normKey(k); if (!/^[A-Z]$/.test(k)) return; }
   e.preventDefault();
   press(k);
 });
-$('kb').addEventListener('click', (e) => {
+// on-screen keyboard: react on touch start for snappy typing, without the delayed click
+$('kb').addEventListener('pointerdown', (e) => {
   const b = e.target.closest('[data-k]');
-  if (b) { b.blur(); press(b.dataset.k); }
+  if (!b) return;
+  e.preventDefault();
+  b.classList.add('down'); setTimeout(() => b.classList.remove('down'), 120);
+  press(b.dataset.k);
+});
+
+// ---------- phone's own keyboard ----------
+function setNative(on) {
+  document.body.classList.toggle('native', on);
+  $('btn-native').textContent = on ? '🔤' : '⌨️';
+  if (on) { syncNative(); $('native').focus({ preventScroll: true }); }
+  else $('native').blur();
+  setTimeout(fitScreen, 300);
+}
+function syncNative() { const el = $('native'); if (el.value !== input) el.value = input; }
+// pointerdown: keep the focus where it is; click: iOS only opens its keyboard from a click/touchend
+$('btn-native').addEventListener('pointerdown', (e) => e.preventDefault());
+$('btn-native').addEventListener('click', () => setNative(!document.body.classList.contains('native')));
+$('grid').addEventListener('click', () => { if (game && game.status === 'playing' && game.started && document.body.classList.contains('native')) $('native').focus({ preventScroll: true }); });
+$('native').addEventListener('input', () => {
+  if (!game || game.status !== 'playing' || !game.started) return;
+  let v = normKey($('native').value).replace(/[^A-Z]/g, '');
+  if (!v.startsWith(game.first)) v = game.first + v;
+  v = v.slice(0, game.length);
+  if (v.length > input.length) { popIndex = v.length - 1; if (navigator.vibrate) navigator.vibrate(8); }
+  input = v;
+  syncNative();
+  renderGrid();
+});
+$('native').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
+$('native').addEventListener('blur', () => {
+  // keyboard closed by the phone (e.g. "OK" button): show ours again
+  setTimeout(() => { if (document.activeElement !== $('native') && document.body.classList.contains('native')) setNative(false); }, 200);
 });
 
 // ---------- share ----------
 function shareText() {
   const icons = { 0: '🟦', 1: '🟡', 2: '🟥' };
   const score = game.status === 'won' ? `${game.guesses.length}/${MAX_TRIES}` : `X/${MAX_TRIES}`;
-  const rows = game.patterns.map((p) => [...p].map((c) => icons[c]).join('')).join('\n');
-  const r = game.status === 'won' && rarityInfo(game.rarity, game.guesses.length);
-  const rarityLine = r ? `\n🎲 Rareté ${r.short} ${r.icon} ${r.label}` : '';
-  return `Le Mot du Jour #${game.num} : ${score}${rarityLine}\n\n${rows}\n\n${location.origin}${location.pathname}`;
+  const rows = game.patterns.map((p, r) => (p === 'T' ? '⬛'.repeat(game.length) + ' ⏱'
+    : [...p].map((c) => icons[c]).join('') + ` ${game.notes[r] ?? ''}`)).join('\n');
+  return `Le Mot du Jour #${game.num} : ${score} · ${game.points ?? 0} pts\n\n${rows}\n\n${location.origin}${location.pathname}`;
 }
 async function copy(text) {
   try { await navigator.clipboard.writeText(text); return true; } catch {}
@@ -447,10 +629,12 @@ async function copy(text) {
   ta.remove(); return ok;
 }
 async function share() {
-  toast((await copy(shareText())) ? 'Résultat copié, colle-le dans le groupe !' : 'Copie impossible');
+  const text = shareText();
+  if (navigator.share && matchMedia('(pointer: coarse)').matches) { try { await navigator.share({ text }); return; } catch {} }
+  toast((await copy(text)) ? 'Résultat copié, colle-le dans le groupe !' : 'Copie impossible');
 }
 
-// ---------- countdown ----------
+// ---------- countdown to the next word ----------
 function secondsToParisMidnight() {
   const parts = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', hour: 'numeric', minute: 'numeric', second: 'numeric', hourCycle: 'h23' })
     .formatToParts(new Date()).reduce((a, p) => (a[p.type] = +p.value, a), {});
@@ -476,84 +660,118 @@ setInterval(async () => {
 
 // ---------- stats ----------
 function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-function miniGrid(patterns) {
-  return `<div class="mini">${patterns.map((p) => `<div>${[...p].map((c) => `<i class="m${c}"></i>`).join('')}</div>`).join('')}</div>`;
-}
+function parseDay(d) { const [y, m, dd] = d.split('-').map(Number); return new Date(Date.UTC(y, m - 1, dd)); }
+function fmtDay(d) { return new Intl.DateTimeFormat('fr-FR', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }).format(parseDay(d)); }
+function fmtMonth(d) { const s = new Intl.DateTimeFormat('fr-FR', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(parseDay(d)); return s[0].toUpperCase() + s.slice(1); }
+function addDays(d, k) { const x = parseDay(d); x.setUTCDate(x.getUTCDate() + k); return x.toISOString().slice(0, 10); }
 function bars(dist) {
   const max = Math.max(1, ...dist);
   return `<div class="bars">${dist.map((v, i) => `<div class="bar"><b>${i + 1}</b><span class="${v === max && v > 0 ? 'hi' : ''}" style="width:${Math.max(8, v / max * 100)}%">${v}</span></div>`).join('')}</div>`;
 }
 
-async function loadStats() {
-  const view = $('view-stats');
-  if (!stats) view.innerHTML = '<div class="muted">Chargement…</div>';
-  try { stats = await rpc('stats', { p_token: getToken() }); } catch (e) { if (e.message === 'NOT_ALLOWED') { logout(); return; } view.innerHTML = '<div class="muted">Impossible de charger les stats.</div>'; return; }
-  const me = game && game.pseudo;
-  const iFinished = game && game.status !== 'playing';
-  const done = stats.games_today.filter((g) => g.status !== 'playing');
-  const winners = stats.games_today.filter((g) => g.status === 'won' && g.rarity);
-  // badge only makes sense with at least 2 winners
-  const luckiest = winners.length >= 2 ? Math.max(...winners.map((g) => g.rarity)) : 0;
-  const today = stats.games_today.length ? stats.games_today.map((g) => {
-    const res = g.status === 'won' ? `${g.tries}/${MAX_TRIES}` : g.status === 'lost' ? `Perdu` : `En cours (${g.tries}/${MAX_TRIES})`;
-    const showGrid = g.status !== 'playing' && Array.isArray(g.patterns);
-    const r = g.status === 'won' && rarityInfo(g.rarity, g.tries);
-    const lucky = r && luckiest > 1 && g.rarity === luckiest;
-    return `<div class="today-item${lucky ? ' lucky' : ''}"><div class="who">${esc(g.pseudo)}</div><div class="res">${res}</div>`
-      + `${r ? `<div class="rar">${r.icon} ${r.label} · ${r.short}</div>` : ''}`
-      + `${lucky ? '<div class="rar"><b>🍀 Coup de chance du jour</b></div>' : ''}`
-      + `${showGrid ? miniGrid(g.patterns) : ''}</div>`;
-  }).join('') : '<div class="muted">Personne n\'a encore joué aujourd\'hui.</div>';
+let statsDay = null;     // day shown in "Résultats du jour"
+let statsMonth = null;   // month shown in the ranking
 
-// Average tries over all finished games, a loss counting as 7 (exact, from the distribution).
-const LOSS_TRIES = 7;
-function scoreAvg(p) {
-  const winTries = p.dist.reduce((s, n, i) => s + n * (i + 1), 0);
-  return (winTries + (p.played - p.wins) * LOSS_TRIES) / p.played;
+function resultCard(r, n, me) {
+  const sum = r.status === 'won' ? `${r.tries}/${MAX_TRIES} · <b>${r.pts} pts</b>`
+    : r.status === 'lost' ? `Perdu · <b>0 pt</b>` : `En cours (${r.tries}/${MAX_TRIES})`;
+  let rows = '';
+  if (Array.isArray(r.patterns)) {
+    rows = r.patterns.map((p, i) => {
+      const cells = p === 'T'
+        ? Array.from({ length: n }, (_, j) => `<div class="mt mT">${j === 0 ? '⏱' : ''}</div>`).join('')
+        : [...p].map((c, j) => `<div class="mt m${c}"><span>${esc(r.guesses[i][j])}</span></div>`).join('');
+      const note = r.notes && r.notes[i];
+      return `<div class="mrow" style="--n:${n}">${cells}<span class="note ${noteClass(note ?? 0)}">${note ?? '–'}</span></div>`;
+    }).join('');
+  } else if (r.tries) {
+    rows = Array.from({ length: r.tries }, () => `<div class="mrow" style="--n:${n}">${Array.from({ length: n }, () => '<div class="mt hid"></div>').join('')}<span></span></div>`).join('');
+  }
+  return `<div class="res${r.pseudo === me ? ' me' : ''}"><div class="res-head"><span class="who">${esc(r.pseudo)}</span><span class="sum">${sum}</span></div><div class="mrows">${rows}</div></div>`;
 }
-  // Ranking: lowest average first, then most wins
-  const ranked = stats.players.filter((p) => p.played > 0).sort((a, b) =>
-    scoreAvg(a) - scoreAvg(b) || b.wins - a.wins || a.pseudo.localeCompare(b.pseudo));
+
+let dayReq = 0;
+async function renderDayCard() {
+  const box = $('day-card');
+  if (!box) return;
+  const my = ++dayReq;
+  box.querySelectorAll('.pager button').forEach((b) => { b.disabled = true; });
+  let d;
+  try { d = await rpc('day_results', { p_token: getToken(), p_day: statsDay }); if (my !== dayReq) return; }
+  catch (e) {
+    if (my !== dayReq) return; if (e.message === 'NOT_ALLOWED') { logout(); return; } box.innerHTML = '<div class="muted">Impossible de charger les résultats.</div>'; return; }
+  const me = game && game.pseudo;
+  const n = d.word ? d.word.length : (statsDay === (game && game.day) ? game.length : 6);
+  const list = d.results.length ? d.results.map((r) => resultCard(r, n, me)).join('') : '<div class="muted">Personne n\'a joué ce jour-là.</div>';
+  box.innerHTML = `
+    <div class="pager">
+      <button class="btn" id="day-prev" ${d.day <= d.first_day ? 'disabled' : ''} aria-label="Jour précédent">‹</button>
+      <b>${d.day === d.today ? "Aujourd'hui" : fmtDay(d.day)} · #${d.num}</b>
+      <button class="btn" id="day-next" ${d.day >= d.today ? 'disabled' : ''} aria-label="Jour suivant">›</button>
+    </div>
+    ${d.word ? `<p class="muted" style="margin-top:0">Mot : <b style="color:var(--ink);letter-spacing:.08em">${esc(d.word)}</b></p>` : ''}
+    ${!d.visible ? '<p class="muted" style="margin-top:0">Termine ta partie pour voir les essais des autres.</p>' : ''}
+    <div class="res-list">${list}</div>`;
+  $('day-prev').onclick = () => { statsDay = addDays(statsDay, -1); renderDayCard(); };
+  $('day-next').onclick = () => { statsDay = addDays(statsDay, 1); renderDayCard(); };
+}
+
+async function renderRanking() {
+  const box = $('rank-card');
+  if (!box) return;
+  let s;
+  try { s = await rpc('stats', { p_token: getToken(), p_month: statsMonth }); }
+  catch (e) { if (e.message === 'NOT_ALLOWED') { logout(); return; } box.innerHTML = '<div class="muted">Impossible de charger le classement.</div>'; return; }
+  statsMonth = s.month;
+  const me = game && game.pseudo;
+  const months = s.months;
+  const idx = months.indexOf(s.month);
+  const ranked = s.players.filter((p) => p.played > 0);
   const rows = ranked.map((p, i) => `
     <tr class="${p.pseudo === me ? 'me' : ''}">
-      <td>${i + 1}</td><td>${esc(p.pseudo)}</td>
+      <td>${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td><td>${esc(p.pseudo)}</td>
+      <td class="num pts">${p.points}</td>
       <td class="num">${p.played}</td>
-      <td class="num">${p.played ? Math.round(p.wins / p.played * 100) : 0} %</td>
-      <td class="num">${scoreAvg(p).toFixed(2).replace('.', ',')}</td>
-      <td class="num">${p.streak}</td><td class="num col-rec">${p.best}</td>
-      <td class="num">${p.best_rarity ? `1/${p.best_rarity}` : '–'}</td>
+      <td class="num">${Math.round(p.wins / p.played * 100)} %</td>
+      <td class="num">${p.avg != null ? String(p.avg).replace('.', ',') : '–'}</td>
+      <td class="num">${p.streak}</td>
     </tr>`).join('');
+  const mine = s.players.find((p) => p.pseudo === me);
+  const group = [0, 1, 2, 3, 4, 5].map((i) => s.players.reduce((t, p) => t + p.dist[i], 0));
+  box.innerHTML = `
+    <div class="pager">
+      <button class="btn" id="m-prev" ${idx >= months.length - 1 ? 'disabled' : ''} aria-label="Mois précédent">‹</button>
+      <b>Classement · ${fmtMonth(s.month)}</b>
+      <button class="btn" id="m-next" ${idx <= 0 ? 'disabled' : ''} aria-label="Mois suivant">›</button>
+    </div>
+    ${rows ? `<div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Joueur</th><th class="num">Points</th><th class="num">Parties</th><th class="num">Vict.</th><th class="num">Moy.</th><th class="num">Série</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+      <p class="muted">Total des points du mois (100 en 1 essai, 80 en 2, 65 en 3, 50 en 4, 35 en 5, 20 en 6, 0 si perdu) : jouer tous les jours paie. Remis à zéro chaque 1<sup>er</sup> du mois. Moy. = essais moyens pour trouver. Série = jours gagnés d'affilée.</p>`
+      : '<div class="muted">Pas encore de partie terminée ce mois-ci.</div>'}
+    <h2 style="margin-top:14px">Répartition des essais (victoires du mois)</h2>
+    <div class="dist-grid">
+      <div><div class="muted" style="margin-bottom:6px">Moi${me ? ' (' + esc(me) + ')' : ''}</div>${mine ? bars(mine.dist) : '<div class="muted">–</div>'}</div>
+      <div><div class="muted" style="margin-bottom:6px">Tout le groupe</div>${bars(group)}</div>
+    </div>`;
+  if (idx < months.length - 1) $('m-prev').onclick = () => { statsMonth = months[idx + 1]; renderRanking(); };
+  if (idx > 0) $('m-next').onclick = () => { statsMonth = months[idx - 1]; renderRanking(); };
+}
 
-  const mine = stats.players.find((p) => p.pseudo === me);
-  const group = [0, 1, 2, 3, 4, 5].map((i) => stats.players.reduce((s, p) => s + p.dist[i], 0));
-
-  view.innerHTML = `
-    <section class="card">
-      <h2>Aujourd'hui ${game ? '· #' + game.num : ''} <span class="muted">(${done.length} terminé${done.length > 1 ? 's' : ''})</span></h2>
-      <div class="today-list">${today}</div>
-      ${!iFinished && stats.games_today.some((g) => g.status !== 'playing' && g.pseudo !== me) ? '<p class="muted">Termine ta partie pour voir les grilles des autres.</p>' : ''}
-    </section>
-    <section class="card">
-      <h2>Classement</h2>
-      ${rows ? `<div class="table-wrap"><table>
-        <thead><tr><th>#</th><th>Joueur</th><th class="num">Parties</th><th class="num">Victoires</th><th class="num">Moy.</th><th class="num">Série</th><th class="num col-rec">Record</th><th class="num">Coup</th></tr></thead>
-        <tbody>${rows}</tbody></table></div>
-        <p class="muted">Classé par moyenne d'essais (le plus bas en tête, une défaite compte 7), puis par nombre de victoires. Série = jours gagnés d'affilée. Coup = victoire la plus improbable (1 chance sur N de trouver avec les indices qu'on avait).</p>`
-        : '<div class="muted">Pas encore de partie terminée.</div>'}
-    </section>
-    <section class="card">
-      <h2>Répartition des essais (victoires)</h2>
-      <div class="dist-grid">
-        <div><div class="muted" style="margin-bottom:6px">Moi${me ? ' (' + esc(me) + ')' : ''}</div>${mine ? bars(mine.dist) : '<div class="muted">–</div>'}</div>
-        <div><div class="muted" style="margin-bottom:6px">Tout le groupe</div>${bars(group)}</div>
-      </div>
-    </section>
+function loadStats() {
+  if (!statsDay || (game && statsDay > game.day)) statsDay = game ? game.day : parisToday();
+  $('view-stats').innerHTML = `
+    <section class="card"><h2>Les essais de chacun</h2><div id="day-card"><div class="muted">Chargement…</div></div></section>
+    <section class="card" id="rank-card"><div class="muted">Chargement…</div></section>
     <section class="card">
       <h2>Mon compte</h2>
       <p class="muted">Sur un autre appareil, connecte-toi avec la même adresse e-mail pour retrouver ton pseudo et tes stats.</p>
       <button class="btn" id="btn-logout">Se déconnecter de cet appareil</button>
+      <p class="credits">Dictionnaire : <a href="http://www.lexique.org" target="_blank" rel="noopener">Lexique 3.83</a> (CC BY-SA 4.0)</p>
     </section>`;
   $('btn-logout').onclick = logout;
+  renderDayCard();
+  renderRanking();
 }
 
 // ---------- views & modals ----------
@@ -562,12 +780,12 @@ function showView(v) {
   $('view-stats').classList.toggle('hidden', v !== 'stats');
   $('tab-game').setAttribute('aria-pressed', v === 'game');
   $('tab-stats').setAttribute('aria-pressed', v === 'stats');
-  if (v === 'stats') loadStats();
-  else if (game) renderGrid();
+  if (v === 'stats') { setNative(false); window.scrollTo(0, 0); loadStats(); }
+  else if (game) renderGame();
 }
 $('tab-game').onclick = () => showView('game');
 $('tab-stats').onclick = () => showView('stats');
-$('btn-help').onclick = () => $('modal-help').classList.remove('hidden');
+$('btn-help').onclick = () => { setNative(false); $('modal-help').classList.remove('hidden'); };
 document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => b.closest('.overlay').classList.add('hidden'));
 
 function askLogin() {
@@ -578,9 +796,12 @@ function askLogin() {
 }
 function logout() {
   setToken(null);
-  game = null; stats = null;
+  game = null; deadline = 0;
+  setNative(false);
   $('in-email').value = ''; $('in-pseudo').value = '';
-  $('grid').innerHTML = ''; $('kb').innerHTML = ''; $('end').classList.add('hidden'); $('num').textContent = '';
+  $('grid').innerHTML = ''; $('kb').innerHTML = ''; $('start').classList.add('hidden');
+  $('end').classList.add('hidden'); $('num').textContent = '';
+  ['timer', 'tbar', 'btn-native'].forEach((id) => $(id).classList.add('hidden'));
   $('view-stats').innerHTML = '';
   setMsg('Connecte-toi pour jouer');
   showView('game');
@@ -597,6 +818,7 @@ $('form-register').onsubmit = async (e) => {
     const r = await rpc('login', args);
     setToken(r.token);
     $('modal-register').classList.add('hidden');
+    $('in-email').blur(); $('in-pseudo').blur();
     await loadGame();
     try { if (!localStorage.getItem('mdj_help_seen')) { localStorage.setItem('mdj_help_seen', '1'); $('modal-help').classList.remove('hidden'); } } catch {}
   } catch (err) {
@@ -624,13 +846,18 @@ async function loadGame() {
   if (!$('view-stats').classList.contains('hidden')) loadStats();
 }
 
-window.addEventListener('resize', () => { if (game) renderGrid(); });
+// coming back to the tab: resync the timer with the server
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && game && game.status === 'playing' && game.started && !busy) refreshAfterTimeout();
+});
 
 (async function init() {
+  fitScreen();
   if (new URLSearchParams(location.search).has('mock')) {
     await new Promise((ok) => { const s = document.createElement('script'); s.src = '../dev/mock.js'; s.onload = s.onerror = ok; document.head.appendChild(s); });
   }
   await loadGame();
+  fitScreen();
 })();
 </script>
 </body>
